@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>RNG Chess — Random Pieces. Random Everything. Free.</title>
+<meta name="description" content="RNG Chess: a free browser chess variant. Random Pieces or Random Everything. Play a friend with a room code, play anyone, play the bot, or play locally. No sign-up, no cost.">
+<style>
+:root{--bg:#0f1115;--panel:#171a21;--panel2:#1e232e;--line:#2a3040;--txt:#eef1f6;--mut:#9aa3b2;--gold:#f2c14e;--green:#58b368;--red:#e5484d;--blue:#4c9aff;--light:#f0d9b5;--dark:#b58863}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;min-height:100%}
+body{padding:0 0 40px}
+a{color:var(--gold)}
+.wrap{max-width:1060px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:8px 0 4px}
+.logo{font-size:30px;font-weight:900;letter-spacing:.5px}
+.logo span{color:var(--gold)}
+.tag{color:var(--mut);font-size:13px;margin-top:2px}
+.badge{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--mut);white-space:nowrap}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+h2{font-size:19px;margin-bottom:6px}
+p{color:var(--mut);font-size:14px;line-height:1.5}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+@media(max-width:640px){.modes{grid-template-columns:1fr}}
+.mode{border:2px solid var(--line);border-radius:12px;padding:14px;cursor:pointer;background:var(--panel2);text-align:left;color:var(--txt);font-family:inherit}
+.mode.sel{border-color:var(--gold);box-shadow:0 0 0 2px rgba(242,193,78,.25)}
+.mode b{font-size:16px;display:block;margin-bottom:4px}
+.mode .dice{font-size:22px}
+.mode p{font-size:13px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+input[type=text]{background:#0c0e12;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px 12px;font-size:16px;min-width:0}
+input[type=text]:focus{outline:2px solid var(--gold);outline-offset:1px}
+button{font-family:inherit;font-size:15px;font-weight:700;border:0;border-radius:10px;padding:12px 16px;cursor:pointer;color:#111;background:var(--gold)}
+button:hover{filter:brightness(1.07)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.ghost{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+button.danger{background:#3a1d1f;color:#ffb3b5;border:1px solid #5b2a2d}
+button.small{padding:8px 11px;font-size:13px}
+select{background:#0c0e12;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px;font-size:15px}
+.btn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:14px}
+.btn-grid button{width:100%}
+.rules{margin-top:14px;font-size:13.5px}
+.rules li{margin:6px 0 6px 18px;color:var(--mut);line-height:1.5}
+.rules li b{color:var(--txt)}
+.hidden{display:none!important}
+/* game layout */
+.game-layout{display:grid;grid-template-columns:minmax(0,640px) 340px;gap:16px;align-items:start;margin-top:12px}
+@media(max-width:900px){.game-layout{grid-template-columns:1fr}}
+.board-wrap{position:relative;width:100%;max-width:640px;margin:0 auto}
+.board{display:grid;grid-template-columns:repeat(8,1fr);width:100%;aspect-ratio:1/1;border-radius:10px;overflow:hidden;border:3px solid #3a2f26;box-shadow:0 10px 40px rgba(0,0,0,.5);user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.sq{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.sq.light{background:var(--light)}
+.sq.dark{background:var(--dark)}
+.sq .pc{font-size:clamp(28px,7.2vw,52px);line-height:1;pointer-events:none;z-index:2}
+.sq .pc.w{color:#fafafa;text-shadow:0 1px 0 #222,0 0 3px #000,0 2px 4px rgba(0,0,0,.6)}
+.sq .pc.b{color:#151515;text-shadow:0 0 3px rgba(255,255,255,.75),0 1px 2px rgba(255,255,255,.4)}
+.sq.sel{box-shadow:inset 0 0 0 4px var(--gold)}
+.sq.last{box-shadow:inset 0 0 0 4px rgba(76,154,255,.85)}
+.sq.check{box-shadow:inset 0 0 0 4px var(--red);background:#e88!important}
+.sq .dot{position:absolute;width:26%;height:26%;border-radius:50%;background:rgba(20,60,20,.45);z-index:1;pointer-events:none}
+.sq .ring{position:absolute;inset:6%;border-radius:50%;border:4px solid rgba(229,72,77,.9);z-index:1;pointer-events:none}
+.sq .coord{position:absolute;font-size:10px;font-weight:700;opacity:.75;z-index:1;pointer-events:none}
+.sq .coord.f{left:3px;bottom:2px}
+.sq .coord.r{right:3px;top:2px}
+.sq.light .coord{color:#7a5a34}
+.sq.dark .coord{color:#f0d9b5}
+.status{font-size:17px;font-weight:800;padding:12px 14px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);margin-bottom:12px;line-height:1.4}
+.status small{display:block;font-weight:500;color:var(--mut);font-size:13px;margin-top:3px}
+.kings{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.king-pill{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 11px;font-size:14px;font-weight:700}
+.king-pill.dead{opacity:.45;text-decoration:line-through}
+.panel h3{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:14px 0 6px}
+.panel h3:first-child{margin-top:0}
+.moves{max-height:180px;overflow:auto;font-size:14px;line-height:1.7;color:var(--mut)}
+.moves b{color:var(--txt)}
+.captured{font-size:22px;line-height:1.5;min-height:28px}
+.conn{font-size:13px;color:var(--mut);line-height:1.5;word-break:break-all}
+.conn b{color:var(--txt)}
+.roomcode{font-size:24px;font-weight:900;letter-spacing:.25em;color:var(--gold)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal .box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;max-width:420px;width:100%;text-align:center}
+.modal .box h2{font-size:22px}
+.promo-pieces{display:flex;gap:10px;justify-content:center;margin:16px 0 4px}
+.promo-pieces button{font-size:38px;padding:10px 16px;background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-height:1.6}
+</style>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div><div class="logo">🎲 RNG <span>CHESS</span></div><div class="tag">Every game is a new roll. No two boards alike. Free forever.</div></div>
+  <div class="badge">FREE &nbsp;•&nbsp; NO SIGN-UP &nbsp;•&nbsp; PC + MOBILE</div>
+</header>
+
+<!-- ============ MENU ============ -->
+<div id="menuScreen">
+  <div class="card">
+    <h2>Pick a mode</h2>
+    <p>Two modes. That's it. The dice decide the rest.</p>
+    <div class="modes">
+      <button class="mode sel" id="modePieces" type="button">
+        <span class="dice">🎲</span><b>1 &nbsp;Random Pieces</b>
+        <p>All 16 pieces per side spawn on the normal starting squares — but <b style="color:#fff">which</b> piece lands on each square is completely random. Multiple kings, zero kings, five queens… anything goes.</p>
+      </button>
+      <button class="mode" id="modeEverything" type="button">
+        <span class="dice">🎲🎲🎲</span><b>2 &nbsp;RANDOM EVERYTHING</b>
+        <p>Piece count is random. Piece types are random. Squares are random. No limits. If you start with no king, you lose on the spot.</p>
+      </button>
+    </div>
+    <div class="row">
+      <label for="nameInput" style="color:var(--mut);font-size:14px">Your name</label>
+      <input type="text" id="nameInput" placeholder="e.g. Henrique" maxlength="20" style="flex:1;min-width:140px">
+      <label for="botLevel" style="color:var(--mut);font-size:14px">Bot</label>
+      <select id="botLevel"><option value="medium">Medium (greedy)</option><option value="easy">Easy (random)</option></select>
+    </div>
+    <div class="btn-grid">
+      <button id="btnCreate" type="button">➕ Create room<br><small style="font-weight:500;font-size:12px">get a code, send it to a friend</small></button>
+      <button id="btnAnyone" type="button" class="ghost">🌍 Play anyone<br><small style="font-weight:500;font-size:12px">matched with a stranger</small></button>
+      <button id="btnBot" type="button" class="ghost">🤖 Play the bot<br><small style="font-weight:500;font-size:12px">solo, right now</small></button>
+      <button id="btnLocal" type="button" class="ghost">👥 Local 2-player<br><small style="font-weight:500;font-size:12px">same screen, pass &amp; play</small></button>
+    </div>
+    <div class="row">
+      <input type="text" id="joinCode" placeholder="Room code — e.g. KQ7B" maxlength="8" style="flex:1;text-transform:uppercase">
+      <button id="btnJoin" type="button" class="ghost">Join room →</button>
+    </div>
+    <p id="menuMsg" style="margin-top:10px;min-height:20px"></p>
+  </div>
+
+  <div class="card rules" style="margin-top:14px">
+    <h2>How RNG Chess works</h2>
+    <ul>
+      <li><b>Win by killing kings.</b> If a side has several kings, <b>all</b> of them must be captured. Capturing one just thins the herd.</li>
+      <li><b>No king at the start = instant loss.</b> The dice can be cruel. Re-roll with a new game.</li>
+      <li><b>Normal chess moves otherwise.</b> Pawns, knights, bishops, rooks, queens and kings all move the usual way. Pawns promote on the last rank (you pick). En passant works. There is <b>no castling</b> — with random pieces it would be chaos.</li>
+      <li><b>You can't leave any of your kings in check.</b> With several kings, every one of them must be safe after your move.</li>
+      <li><b>Checkmate / stalemate:</b> no legal moves while a king is attacked = you lose. No legal moves and no king attacked = draw. Repetition and the 50-move rule are draws too.</li>
+      <li><b>White moves first.</b> The room creator plays White (colours swap on rematch).</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============ GAME ============ -->
+<div id="gameScreen" class="hidden">
+  <div class="game-layout">
+    <div>
+      <div class="board-wrap"><div class="board" id="board"></div></div>
+      <div class="row" style="justify-content:space-between">
+        <button class="ghost small" id="btnFlip" type="button">⇅ Flip board</button>
+        <button class="ghost small" id="btnSound" type="button">🔊 Sound on</button>
+        <button class="ghost small" id="btnMenu" type="button">← Menu</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="status" id="statusBox">White to move<small id="statusSub"></small></div>
+      <div class="kings" id="kingsBox"></div>
+      <div class="card" style="padding:14px">
+        <h3>Room</h3>
+        <div class="conn" id="connBox">Local game</div>
+        <div id="roomBox" class="hidden" style="margin-top:8px"><span class="roomcode" id="roomCodeText"></span><br>
+        <button class="ghost small" id="btnCopy" type="button" style="margin-top:8px">Copy code / link</button></div>
+        <h3>Captured</h3>
+        <div class="captured" id="capWhite">♔ White took: —</div>
+        <div class="captured" id="capBlack">♚ Black took: —</div>
+        <h3>Moves</h3>
+        <div class="moves" id="movesBox">No moves yet — the dice have spoken, now you move.</div>
+        <div class="row" style="margin-top:14px">
+          <button id="btnRematch" type="button" class="small">🎲 Rematch (new roll)</button>
+          <button id="btnResign" type="button" class="danger small">🏳 Resign</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer> RNG Chess — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>
+Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.</footer>
+</div>
+
+<div id="promoModal" class="modal hidden"><div class="box">
+  <h2>Promote your pawn</h2><p>Pick a piece. (The dice are watching.)</p>
+  <div class="promo-pieces" id="promoPieces"></div>
+</div></div>
+
+<div id="overModal" class="modal hidden"><div class="box">
+  <h2 id="overTitle">White wins</h2><p id="overReason"></p>
+  <div class="row" style="justify-content:center;margin-top:16px">
+    <button id="btnOverRematch" type="button">🎲 Rematch</button>
+    <button id="btnOverMenu" type="button" class="ghost">Menu</button>
+  </div>
+</div></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   RNG CHESS — engine + UI + multiplayer (PeerJS / WebRTC, $0, no server)
+   Engine is pure JS with no DOM dependency so it can be unit-tested
+   in Node: `node test/engine.test.js` extracts this script.
+   ===================================================================== */
+const TYPES = ['K','Q','R','B','N','P'];
+const VAL = {K:0,Q:9,R:5,B:3,N:3,P:1};
+const GLYPH = {w:{K:'♔',Q:'♕',R:'♖',B:'♗',N:'♘',P:'♙'}, b:{K:'♚',Q:'♛',R:'♜',B:'♝',N:'♞',P:'♟'}};
+const FILES = 'abcdefgh';
+function sqName(i){ return FILES[i%8] + (8 - Math.floor(i/8)); }
+function opp(c){ return c==='w' ? 'b' : 'w'; }
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function randomSeed(){ if (typeof crypto!=='undefined' && crypto.getRandomValues){ const a=new Uint32Array(1); crypto.getRandomValues(a); return a[0]>>>0; } return (Math.random()*4294967296)>>>0; }
+function shuffle(arr,rng){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); const t=arr[i]; arr[i]=arr[j]; arr[j]=t; } return arr; }
+
+/* ---- setup generation: the heart of RNG Chess ---- */
+function genSetup(mode, seed){
+  const rng = mulberry32(seed>>>0);
+  const board = new Array(64).fill(null);
+  const pick = () => TYPES[Math.floor(rng()*6)];
+  if (mode==='pieces'){
+    // Standard 16 slots per side (ranks 1-2 white, 7-8 black), random type each.
+    for(let c=0;c<8;c++){
+      board[6*8+c]={t:pick(),c:'w'}; board[7*8+c]={t:pick(),c:'w'};
+      board[0*8+c]={t:pick(),c:'b'}; board[1*8+c]={t:pick(),c:'b'};
+    }
+  } else {
+    // RANDOM EVERYTHING: random total (0-64), random split, random squares, random types.
+    const total = Math.floor(rng()*65);
+    const wCount = Math.floor(rng()*(total+1));
+    const bCount = total - wCount;
+    const squares = shuffle(Array.from({length:64},(_,i)=>i), rng);
+    let k=0;
+    for(let i=0;i<wCount;i++) board[squares[k++]]={t:pick(),c:'w'};
+    for(let i=0;i<bCount;i++) board[squares[k++]]={t:pick(),c:'b'};
+    // A pawn spawned on the last rank auto-promotes to queen (no illegal position).
+    for(let i=0;i<64;i++){ const p=board[i]; if(!p||p.t!=='P') continue; const r=(i/8)|0;
+      if((p.c==='w'&&r===0)||(p.c==='b'&&r===7)) p.t='Q'; }
+  }
+  return {board, mode, seed};
+}
+function countKings(board,color){ let n=0; for(const p of board) if(p&&p.t==='K'&&p.c===color) n++; return n; }
+function countPieces(board,color){ let n=0; for(const p of board) if(p&&p.c===color) n++; return n; }
+function kingsOf(board,color){ const out=[]; for(let i=0;i<64;i++){ const p=board[i]; if(p&&p.t==='K'&&p.c===color) out.push(i); } return out; }
+function pieceCounts(board,color){ const m={K:0,Q:0,R:0,B:0,N:0,P:0}; for(const p of board) if(p&&p.c===color) m[p.t]++; return m; }
+
+function isAttacked(board,r,c,by){
+  if(r<0||r>7||c<0||c>7) return false;
+  const pr = by==='w' ? r+1 : r-1; // a white pawn attacking (r,c) sits one row below it
+  for(const dc of [-1,1]){ const cc=c+dc;
+    if(pr>=0&&pr<8&&cc>=0&&cc<8){ const p=board[pr*8+cc]; if(p&&p.c===by&&p.t==='P') return true; } }
+  const knight=[[ -2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+  for(const [dr,dc] of knight){ const rr=r+dr, cc=c+dc;
+    if(rr>=0&&rr<8&&cc>=0&&cc<8){ const p=board[rr*8+cc]; if(p&&p.c===by&&p.t==='N') return true; } }
+  for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(!dr&&!dc) continue;
+    const rr=r+dr, cc=c+dc;
+    if(rr>=0&&rr<8&&cc>=0&&cc<8){ const p=board[rr*8+cc]; if(p&&p.c===by&&p.t==='K') return true; } }
+  const rays=[{d:[[1,0],[-1,0],[0,1],[0,-1]],t:['R','Q']},{d:[[1,1],[1,-1],[-1,1],[-1,-1]],t:['B','Q']}];
+  for(const ray of rays) for(const [dr,dc] of ray.d){
+    let rr=r+dr, cc=c+dc;
+    while(rr>=0&&rr<8&&cc>=0&&cc<8){ const p=board[rr*8+cc];
+      if(p){ if(p.c===by&&ray.t.includes(p.t)) return true; break; }
+      rr+=dr; cc+=dc; } }
+  return false;
+}
+
+function pseudoMoves(board,color,ep){
+  const moves=[];
+  const push=(from,to,extra)=>moves.push(Object.assign({from,to,promotion:null,ep:false,double:false},extra||{}));
+  for(let i=0;i<64;i++){ const p=board[i]; if(!p||p.c!==color) continue;
+    const r=(i/8)|0, c=i%8;
+    if(p.t==='P'){
+      const dir=color==='w'?-1:1, startRow=color==='w'?6:1, lastRow=color==='w'?0:7, r1=r+dir;
+      if(r1>=0&&r1<8&&!board[r1*8+c]){
+        push(i,r1*8+c,{promotion:(r1===lastRow?'Q':null)});
+        const r2=r+2*dir;
+        if(r===startRow&&!board[r2*8+c]) push(i,r2*8+c,{double:true});
+      }
+      for(const dc of [-1,1]){ const cc=c+dc; if(cc<0||cc>7||r1<0||r1>7) continue;
+        const t=board[r1*8+cc];
+        if(t&&t.c!==color) push(i,r1*8+cc,{promotion:(r1===lastRow?'Q':null)});
+        else if(ep===r1*8+cc) push(i,ep,{ep:true});
+      }
+    } else if(p.t==='N'||p.t==='K'){
+      const offs=p.t==='N'?[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]:[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+      for(const [dr,dc] of offs){ const rr=r+dr, cc=c+dc; if(rr<0||rr>7||cc<0||cc>7) continue;
+        const t=board[rr*8+cc]; if(!t||t.c!==color) push(i,rr*8+cc); }
+    } else {
+      const dirs=p.t==='R'?[[1,0],[-1,0],[0,1],[0,-1]]:p.t==='B'?[[1,1],[1,-1],[-1,1],[-1,-1]]:[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+      for(const [dr,dc] of dirs){ let rr=r+dr, cc=c+dc;
+        while(rr>=0&&rr<8&&cc>=0&&cc<8){ const t=board[rr*8+cc];
+          if(!t) push(i,rr*8+cc);
+          else { if(t.c!==color) push(i,rr*8+cc); break; }
+          rr+=dr; cc+=dc; } }
+    }
+  }
+  return moves;
+}
+function applyMoveToBoard(board,move){
+  const nb=board.slice(); const p=nb[move.from]; nb[move.from]=null;
+  let captured=null;
+  if(move.ep){ const capIdx=move.to+(p.c==='w'?8:-8); captured=nb[capIdx]; nb[capIdx]=null; }
+  else captured=nb[move.to];
+  const np={t:move.promotion||p.t, c:p.c}; nb[move.to]=np;
+  const newEp=move.double ? (move.from+move.to)/2 : -1;
+  return {board:nb, captured, ep:newEp};
+}
+function legalMoves(state){
+  const pseudo=pseudoMoves(state.board,state.turn,state.ep);
+  const out=[];
+  for(const m of pseudo){
+    const nb=applyMoveToBoard(state.board,m).board;
+    let safe=true;
+    for(const k of kingsOf(nb,state.turn)){
+      if(isAttacked(nb,(k/8)|0,k%8,opp(state.turn))){ safe=false; break; }
+    }
+    if(safe) out.push(m);
+  }
+  return out;
+}
+function posKey(board,turn,ep){ let s=''; for(const p of board) s+=p?p.c+p.t:'..'; return s+turn+(ep>=0?('e'+ep):''); }
+function evaluate(st){
+  const wk=countKings(st.board,'w'), bk=countKings(st.board,'b');
+  if(wk===0&&bk===0) return {over:true,winner:null,reason:'Both sides rolled zero kings. Draw — re-roll!'};
+  if(wk===0) return {over:true,winner:'b',reason:'White started with no king. Black wins by default!'};
+  if(bk===0) return {over:true,winner:'w',reason:'Black started with no king. White wins by default!'};
+  const moves=legalMoves(st);
+  if(moves.length===0){
+    const inChk=kingsOf(st.board,st.turn).some(k=>isAttacked(st.board,(k/8)|0,k%8,opp(st.turn)));
+    if(inChk) return {over:true,winner:opp(st.turn),reason:(st.turn==='w'?'White':'Black')+' has a king in check with no legal move — checkmate!'};
+    return {over:true,winner:null,reason:'Stalemate — no legal moves. Draw.'};
+  }
+  if(st.halfmove>=100) return {over:true,winner:null,reason:'Fifty-move rule — draw.'};
+  if((st.posCounts[posKey(st.board,st.turn,st.ep)]||0)>=3) return {over:true,winner:null,reason:'Same position three times — draw.'};
+  return {over:false,winner:null,reason:''};
+}
+function newGame(mode,seed,boardOverride){
+  const setup=boardOverride?{board:boardOverride,mode,seed}:genSetup(mode,seed);
+  const st={mode,seed,board:setup.board,turn:'w',ep:-1,halfmove:0,fullmove:1,over:false,winner:null,reason:'',history:[],posCounts:{}};
+  st.posCounts[posKey(st.board,'w',-1)]=1;
+  const ev=evaluate(st); st.over=ev.over; st.winner=ev.winner; st.reason=ev.reason;
+  return st;
+}
+function doMove(st,req){
+  if(st.over) return null;
+  const legal=legalMoves(st);
+  const m=legal.find(x=>x.from===req.from&&x.to===req.to);
+  if(!m) return null;
+  const mv={from:m.from,to:m.to,promotion:(req.promotion&&m.promotion)?req.promotion:(m.promotion||null),ep:!!m.ep,double:!!m.double};
+  const piece=st.board[mv.from];
+  const res=applyMoveToBoard(st.board,mv);
+  st.board=res.board; st.ep=res.ep;
+  st.halfmove=(piece.t==='P'||res.captured)?0:st.halfmove+1;
+  if(st.turn==='b') st.fullmove++;
+  st.turn=opp(st.turn);
+  st.history.push({from:mv.from,to:mv.to,piece:piece.t,color:piece.c,captured:res.captured?res.captured.t:null,promotion:mv.promotion,ep:!!mv.ep});
+  const key=posKey(st.board,st.turn,st.ep); st.posCounts[key]=(st.posCounts[key]||0)+1;
+  const ev=evaluate(st); st.over=ev.over; st.winner=ev.winner; st.reason=ev.reason;
+  return mv;
+}
+function botMove(st,difficulty){
+  const moves=legalMoves(st); if(!moves.length) return null;
+  if(difficulty==='easy') return moves[Math.floor(Math.random()*moves.length)];
+  let best=null,bestScore=-1e9;
+  for(const m of moves){
+    let s=Math.random()*1.5;
+    const tgt=st.board[m.to];
+    if(m.ep){ s+=10; }
+    else if(tgt){ s+=(tgt.t==='K'?1000:VAL[tgt.t]*10); }
+    if(m.promotion) s+=9;
+    if(s>bestScore){ bestScore=s; best=m; }
+  }
+  return best;
+}
+function serializeState(st){ return {mode:st.mode,seed:st.seed,board:st.board,turn:st.turn,ep:st.ep,halfmove:st.halfmove,fullmove:st.fullmove,history:st.history,posCounts:st.posCounts,over:st.over,winner:st.winner,reason:st.reason}; }
+function deserializeState(s){ const st=Object.assign({},s); st.board=s.board.map(p=>p?{t:p.t,c:p.c}:null); return st; }
+if(typeof module!=='undefined'&&module.exports){ module.exports={TYPES,VAL,genSetup,countKings,countPieces,kingsOf,pieceCounts,isAttacked,pseudoMoves,applyMoveToBoard,legalMoves,posKey,evaluate,newGame,doMove,botMove,serializeState,deserializeState,mulberry32,sqName,opp}; }
+</script>
+<script>
+"use strict";
+/* ================= UI + multiplayer ================= */
+let mode='pieces';
+let state=null;
+let myColor=null;          // 'w' | 'b' | null (local/bot: both)
+let playMode='local';      // local | bot | online
+let botLevel='medium';
+let flipped=false;
+let soundOn=true;
+let selected=-1, legalCache=[];
+let peer=null, conn=null, isHost=false, roomCode=null, waitingForGuest=false;
+let pendingPromo=null;
+const $=id=>document.getElementById(id);
+const myName=()=>($('nameInput').value||'').trim()||'Player';
+
+function beep(freq,dur){ if(!soundOn) return; try{ const ctx=beep.ctx||(beep.ctx=new (window.AudioContext||window.webkitAudioContext)()); const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.value=freq; o.type='sine'; g.gain.value=0.06; o.connect(g); g.connect(ctx.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur); o.stop(ctx.currentTime+dur); }catch(e){} }
+function show(id,on){ $(id).classList.toggle('hidden',!on); }
+function setMenuMsg(t){ $('menuMsg').textContent=t||''; }
+
+/* ---- mode picker ---- */
+function pickMode(m){ mode=m; $('modePieces').classList.toggle('sel',m==='pieces'); $('modeEverything').classList.toggle('sel',m==='everything'); }
+$('modePieces').onclick=()=>pickMode('pieces');
+$('modeEverything').onclick=()=>pickMode('everything');
+$('botLevel').onchange=e=>botLevel=e.target.value;
+
+/* ---- board rendering ---- */
+const boardEl=$('board');
+const squares=[];
+(function buildBoard(){
+  for(let i=0;i<64;i++){ const d=document.createElement('div'); d.className='sq'; d.dataset.idx=i;
+    d.addEventListener('click',()=>onSquare(parseInt(d.dataset.idx,10))); squares.push(d); boardEl.appendChild(d); }
+})();
+function render(){
+  if(!state) return;
+  const display = flipped ? [...Array(64).keys()].map(i=>63-i) : [...Array(64).keys()];
+  display.forEach((boardIdx,pos)=>{ const el=squares[pos]; const r=(boardIdx/8)|0, c=boardIdx%8;
+    el.dataset.idx=boardIdx;
+    el.className='sq '+(((r+c)%2===0)?'light':'dark');
+    const p=state.board[boardIdx];
+    let html='';
+    if(p) html+='<span class="pc '+p.c+'">'+GLYPH[p.c][p.t]+'</span>';
+    const last=state.history[state.history.length-1];
+    if(last&&(last.from===boardIdx||last.to===boardIdx)) el.classList.add('last');
+    if(p&&p.t==='K'&&isAttacked(state.board,r,c,opp(p.c))) el.classList.add('check');
+    if(selected===boardIdx) el.classList.add('sel');
+    const dest=legalCache.find(m=>m.to===boardIdx);
+    if(selected>=0&&dest) html+= state.board[boardIdx]||dest.ep ? '<span class="ring"></span>' : '<span class="dot"></span>';
+    if(c===0) html+='<span class="coord r">'+(8-r)+'</span>';
+    if(r===7) html+='<span class="coord f">'+FILES[c]+'</span>';
+    el.innerHTML=html;
+  });
+  // status
+  const wk=countKings(state.board,'w'), bk=countKings(state.board,'b');
+  const turnName=state.turn==='w'?'White':'Black';
+  const inChk=kingsOf(state.board,state.turn).some(k=>isAttacked(state.board,(k/8)|0,k%8,opp(state.turn)));
+  if(state.over){
+    $('statusBox').innerHTML=(state.winner?(state.winner==='w'?'♔ White wins!':'♚ Black wins!'):'🤝 Draw')+'<small>'+state.reason+'</small>';
+  } else {
+    $('statusBox').innerHTML=turnName+' to move'+(inChk?' — CHECK!':'')+'<small>'+(playMode==='online'?(myColor===state.turn?'Your move.':'Waiting for opponent…'):(playMode==='bot'?(state.turn==='b'?'Bot is thinking…':'Your move.'):''))+'</small>';
+  }
+  $('statusSub').textContent='';
+  $('kingsBox').innerHTML='<span class="king-pill'+(wk===0?' dead':'')+'">♔ White kings: '+wk+'</span><span class="king-pill'+(bk===0?' dead':'')+'">♚ Black kings: '+bk+'</span><span class="king-pill">Seed '+state.seed+'</span><span class="king-pill">'+(state.mode==='pieces'?'Random Pieces':'RANDOM EVERYTHING')+'</span>';
+  const capW=[], capB=[];
+  for(const h of state.history){ if(h.captured){ (h.color==='w'?capW:capB).push(GLYPH[opp(h.color)][h.captured]); } }
+  $('capWhite').textContent='♔ White took: '+(capW.join(' ')||'—');
+  $('capBlack').textContent='♚ Black took: '+(capB.join(' ')||'—');
+  $('movesBox').innerHTML=state.history.length?state.history.map((h,i)=>{
+    const n=Math.floor(i/2)+1, pre=(i%2===0)?(n+'. '):'';
+    return pre+'<b>'+h.piece+'</b> '+sqName(h.from)+(h.captured?'x':'–')+sqName(h.to)+(h.promotion?'='+h.promotion:'');
+  }).join(' &nbsp; '):'No moves yet — the dice have spoken, now you move.';
+  if(state.over) showOver();
+}
+function showOver(){
+  if(!state||!state.over) return;
+  $('overTitle').textContent=state.winner?(state.winner==='w'?'♔ White wins!':'♚ Black wins!'):'🤝 Draw';
+  $('overReason').textContent=state.reason;
+  show('overModal',true);
+}
+function hideOver(){ show('overModal',false); }
+
+/* ---- interaction ---- */
+function myTurn(){ if(!state||state.over) return false; if(playMode==='local') return true; if(playMode==='bot') return state.turn==='w'; return state.turn===myColor; }
+function onSquare(i){
+  if(!state||state.over) return;
+  if(!myTurn()) return;
+  if(selected>=0){
+    const dest=legalCache.find(m=>m.to===i);
+    if(dest){ attemptMove(selected,i); return; }
+  }
+  const p=state.board[i];
+  if(p&&p.c===state.turn){ selected=i; legalCache=legalMoves(state).filter(m=>m.from===i); render(); }
+  else { selected=-1; legalCache=[]; render(); }
+}
+function attemptMove(from,to){
+  const p=state.board[from];
+  const lastRow=p.c==='w'?0:7;
+  if(p.t==='P'&&((to/8)|0)===lastRow){
+    pendingPromo={from,to};
+    const box=$('promoPieces'); box.innerHTML='';
+    for(const t of ['Q','R','B','N']){ const b=document.createElement('button'); b.type='button'; b.textContent=GLYPH[p.c][t];
+      b.onclick=()=>{ show('promoModal',false); finishMove(pendingPromo.from,pendingPromo.to,t); pendingPromo=null; }; box.appendChild(b); }
+    show('promoModal',true); return;
+  }
+  finishMove(from,to,null);
+}
+function finishMove(from,to,promotion){
+  const mv=doMove(state,{from,to,promotion});
+  selected=-1; legalCache=[];
+  if(!mv){ render(); return; }
+  beep(mv&&state.history[state.history.length-1].captured?180:440,0.12);
+  render();
+  if(playMode==='online'&&conn&&conn.open) send({t:'move',move:mv});
+  if(playMode==='bot'&&!state.over&&state.turn==='b'){
+    setTimeout(()=>{ const bm=botMove(state,botLevel); if(bm){ doMove(state,bm); beep(330,0.1); render(); } },450);
+  }
+}
+
+/* ---- starting games ---- */
+function startGame(m,seed,opts){
+  opts=opts||{};
+  playMode=opts.playMode||'local'; myColor=opts.myColor||null; isHost=!!opts.isHost; roomCode=opts.roomCode||null;
+  state=newGame(m,seed,opts.board||null);
+  flipped=(myColor==='b');
+  selected=-1; legalCache=[]; hideOver();
+  show('menuScreen',false); show('gameScreen',true);
+  $('roomBox').classList.toggle('hidden',!roomCode);
+  if(roomCode) $('roomCodeText').textContent=roomCode;
+  $('connBox').innerHTML=opts.connText||(playMode==='online'?'Online game':'Local game');
+  render();
+  if(state.over) beep(220,0.3);
+}
+function backToMenu(){
+  try{ if(conn) conn.close(); }catch(e){}
+  try{ if(peer) peer.destroy(); }catch(e){}
+  peer=null; conn=null; roomCode=null; waitingForGuest=false;
+  hideOver(); show('gameScreen',false); show('menuScreen',true);
+}
+$('btnMenu').onclick=backToMenu;
+$('btnOverMenu').onclick=backToMenu;
+$('btnFlip').onclick=()=>{ flipped=!flipped; render(); };
+$('btnSound').onclick=e=>{ soundOn=!soundOn; e.target.textContent=soundOn?'🔊 Sound on':'🔇 Sound off'; };
+$('btnCopy').onclick=async()=>{
+  const link=location.origin+location.pathname+'?room='+roomCode;
+  const txt='RNG Chess room '+roomCode+' — join me: '+link;
+  try{ await navigator.clipboard.writeText(txt); $('btnCopy').textContent='Copied!'; setTimeout(()=>$('btnCopy').textContent='Copy code / link',1500); }
+  catch(e){ prompt('Copy your room link:',txt); }
+};
+$('btnLocal').onclick=()=>startGame(mode,randomSeed(),{playMode:'local',connText:'Local 2-player — same screen, pass &amp; play.'});
+$('btnBot').onclick=()=>startGame(mode,randomSeed(),{playMode:'bot',myColor:'w',connText:'You (White) vs Bot ('+botLevel+'). Bot plays Black.'});
+$('btnRematch').onclick=()=>requestRematch();
+$('btnOverRematch').onclick=()=>{ hideOver(); requestRematch(); };
+$('btnResign').onclick=()=>{
+  if(!state||state.over) return;
+  if(playMode==='online'&&conn&&conn.open) send({t:'resign',by:myColor});
+  const loser=playMode==='local'?state.turn:(myColor||state.turn);
+  state.over=true; state.winner=opp(loser); state.reason=(loser==='w'?'White':'Black')+' resigned.'; render();
+};
+function requestRematch(){
+  const m=state?state.mode:mode;
+  if(playMode==='online'&&conn&&conn.open){
+    if(isHost){ const seed=randomSeed(); const nc=myColor==='w'?'b':'w'; myColor=nc;
+      send({t:'rematch',mode:m,seed,guestColor:opp(nc)});
+      startGame(m,seed,{playMode:'online',myColor:nc,isHost:true,roomCode,connText:'Online game — rematch! Colours swapped.'});
+    } else { send({t:'rematch-request',mode:m}); setMenuMsg('Rematch requested — waiting for host…'); }
+    return;
+  }
+  const swap=playMode==='bot'||playMode==='online';
+  startGame(m,randomSeed(),{playMode,myColor:playMode==='bot'?'w':null,connText:playMode==='bot'?'You (White) vs Bot.':'Local 2-player — new roll!'});
+}
+
+/* ---- multiplayer (PeerJS) ---- */
+function peerIdFor(code){ return 'rngchess-v1-'+code.toUpperCase(); }
+function makeCode(){ const chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<4;i++) s+=chars[Math.floor(Math.random()*chars.length)]; return s; }
+function send(obj){ try{ if(conn&&conn.open) conn.send(obj); }catch(e){} }
+function attachConn(c,asHost){
+  conn=c;
+  c.on('data',msg=>handleMsg(msg,asHost));
+  c.on('close',()=>{ if(state&&!state.over){ $('connBox').innerHTML='<b>Opponent disconnected.</b> You can keep looking at the board, or head back to the menu for a new game.'; } });
+  c.on('error',()=>{});
+  c.on('open',()=>{
+    $('connBox').innerHTML='<b>Connected!</b> '+(asHost?'Your friend joined. You are White.':'You joined. You are Black.');
+    if(asHost){ // host sends the rolled setup; guest adopts it
+      const setup={t:'setup',mode:state.mode,seed:state.seed,board:state.board};
+      send(setup);
+    }
+  });
+}
+function handleMsg(msg,asHost){
+  if(!msg||typeof msg!=='object') return;
+  if(msg.t==='setup'&&!asHost){
+    startGame(msg.mode,msg.seed,{playMode:'online',myColor:'b',isHost:false,roomCode,connText:'Online game — you are <b>Black</b>. White moves first.'});
+    // adopt the host's exact board (same seed, but trust the wire)
+    state.board=msg.board.map(p=>p?{t:p.t,c:p.c}:null);
+    const ev=evaluate(state); state.over=ev.over; state.winner=ev.winner; state.reason=ev.reason; render();
+  } else if(msg.t==='move'){
+    const mv=doMove(state,msg.move); if(mv){ beep(330,0.1); render(); }
+    else if(asHost){ send({t:'state',state:serializeState(state)}); } // resync a confused guest
+  } else if(msg.t==='state'){
+    state=deserializeState(msg.state); selected=-1; legalCache=[]; render();
+  } else if(msg.t==='resign'){
+    state.over=true; state.winner=opp(msg.by); state.reason=(msg.by==='w'?'White':'Black')+' resigned.'; render();
+  } else if(msg.t==='rematch'){
+    startGame(msg.mode,msg.seed,{playMode:'online',myColor:msg.guestColor,isHost:false,roomCode,connText:'Online game — rematch! Colours swapped.'});
+  } else if(msg.t==='rematch-request'&&asHost){
+    requestRematch();
+  }
+}
+$('btnCreate').onclick=()=>{
+  if(typeof Peer==='undefined'){ setMenuMsg('Could not load the multiplayer library (PeerJS). Check your connection and try again — bot and local play still work.'); return; }
+  const code=makeCode(); roomCode=code;
+  setMenuMsg('Creating room '+code+'…');
+  try{ if(peer) peer.destroy(); }catch(e){}
+  peer=new Peer(peerIdFor(code));
+  peer.on('open',()=>{
+    setMenuMsg('Room '+code+' is live — send the code to your friend.');
+    startGame(mode,randomSeed(),{playMode:'online',myColor:'w',isHost:true,roomCode:code,connText:'Room <b>'+code+'</b> — waiting for your friend to join…<br>Send them the code, or the copy button below.'});
+    waitingForGuest=true;
+  });
+  peer.on('connection',c=>{ waitingForGuest=false; attachConn(c,true); });
+  peer.on('error',err=>{ setMenuMsg('Could not create the room ('+(err&&err.type||'error')+'). Try again.'); });
+};
+$('btnJoin').onclick=()=>{
+  const code=($('joinCode').value||'').trim().toUpperCase();
+  if(!code){ setMenuMsg('Type a room code first.'); return; }
+  joinRoom(code);
+};
+function joinRoom(code){
+  if(typeof Peer==='undefined'){ setMenuMsg('Could not load the multiplayer library (PeerJS). Check your connection and try again.'); return; }
+  roomCode=code; setMenuMsg('Joining room '+code+'…');
+  try{ if(peer) peer.destroy(); }catch(e){}
+  peer=new Peer();
+  peer.on('open',()=>{
+    const c=peer.connect(peerIdFor(code),{reliable:true});
+    attachConn(c,false);
+    c.on('open',()=>{ setMenuMsg('Joined room '+code+'! Waiting for the board…'); });
+    setTimeout(()=>{ if(!conn||!conn.open) setMenuMsg('Still trying to reach room '+code+' — is the code right, and is your friend\'s room still open?'); },6000);
+  });
+  peer.on('error',err=>{ setMenuMsg('Could not join room '+code+' ('+(err&&err.type||'error')+'). Double-check the code.'); });
+}
+/* Play Anyone: claim a lobby slot, or join the stranger waiting in one. */
+$('btnAnyone').onclick=async()=>{
+  if(typeof Peer==='undefined'){ setMenuMsg('Could not load the multiplayer library (PeerJS). Check your connection and try again.'); return; }
+  setMenuMsg('Looking for an opponent…');
+  for(let slot=1;slot<=5;slot++){
+    const res=await tryLobbySlot(slot);
+    if(res==='wait'||res==='joined') return;
+  }
+  setMenuMsg('All lobby slots are busy right now — try again in a few seconds, or create a room instead.');
+};
+function tryLobbySlot(slot){
+  return new Promise(resolve=>{
+    const id='rngchess-lobby-v1-'+slot;
+    let done=false;
+    const finish=v=>{ if(!done){ done=true; resolve(v); } };
+    let p;
+    try{ p=new Peer(id); }catch(e){ return finish('next'); }
+    const timer=setTimeout(()=>{ try{p.destroy();}catch(e){} finish('next'); },4000);
+    p.on('open',()=>{
+      clearTimeout(timer); peer=p; isHost=true; roomCode=null;
+      startGame(mode,randomSeed(),{playMode:'online',myColor:'w',isHost:true,roomCode:null,connText:'In the lobby (slot '+slot+') — waiting for an opponent to join…'});
+      setMenuMsg('Waiting for an opponent… (lobby slot '+slot+')');
+      p.on('connection',c=>{ attachConn(c,true); setMenuMsg('Opponent found — good luck!'); });
+      finish('wait');
+    });
+    p.on('error',err=>{
+      if(err&&err.type==='unavailable-id'){
+        clearTimeout(timer); try{p.destroy();}catch(e){}
+        // Someone is waiting in this slot: join them as challenger.
+        const p2=new Peer(); let done2=false;
+        const t2=setTimeout(()=>{ try{p2.destroy();}catch(e){} if(!done2){ done2=true; finish('next'); } },6000);
+        p2.on('open',()=>{
+          peer=p2; roomCode=null;
+          const c=p2.connect(id,{reliable:true});
+          attachConn(c,false);
+          c.on('open',()=>{ clearTimeout(t2); if(!done2){ done2=true; setMenuMsg('Opponent found — good luck!'); finish('joined'); } });
+          c.on('error',()=>{ clearTimeout(t2); if(!done2){ done2=true; finish('next'); } });
+        });
+        p2.on('error',()=>{ clearTimeout(t2); if(!done2){ done2=true; finish('next'); } });
+      } else { clearTimeout(timer); try{p.destroy();}catch(e){} finish('next'); }
+    });
+  });
+}
+/* Deep link: ?room=CODE joins that room on load */
+(function deepLink(){
+  try{
+    const q=new URLSearchParams(location.search);
+    const room=(q.get('room')||'').trim().toUpperCase();
+    if(room){ $('joinCode').value=room; setMenuMsg('Room '+room+' detected — press Join room to enter.'); }
+  }catch(e){}
+})();
+if(typeof module!=='undefined'&&module.exports){ /* engine exports live in the first script block */ }
+</script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+# RNG Chess — Cloudflare config
+#
+# Pages (the game itself): NO config needed. Deploy from the dashboard
+# (Framework preset: None, build command empty, output directory /)
+# or:  wrangler pages deploy . --project-name rng-chess
+#
+# Worker relay (optional, see worker/): this file is its config.
+# Deploy with:  cd worker && npx wrangler deploy
+# (run from the worker/ folder so `main` below resolves.)
+name = "rng-chess-relay"
+compatibility_date = "2026-11-01"
+main = "src/index.js"
+
+# Uncomment to enable the Durable Object room relay:
+# [[durable_objects.bindings]]
+# name = "RNG_ROOM"
+# class_name = "RngRoom"
+#
+# [[migrations]]
+# tag = "v1"
+# new_sqlite_classes = ["RngRoom"]
