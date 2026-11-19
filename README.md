@@ -16,7 +16,7 @@ Piece count is random. Piece types are random. Squares are random. No limits. A 
 
 ### The rules that make it work
 - **Win by killing kings.** If a side has several kings, **all** of them must be captured. Capturing one just thins the herd.
-- **No king at the start = instant loss.** The dice can be cruel. Re-roll with a new game.
+- **The dice are weighted:** each side usually (85%) starts with at least one king — only the first king is weighted, and a kingless start is still possible. Boards that would open checkmated or stalemated are re-rolled until White has a legal move, so every game starts playable.
 - **Otherwise, normal chess.** Pawns, knights, bishops, rooks, queens and kings move the usual way. Pawns promote on the last rank (you pick the piece). En passant works. There is **no castling** — with random pieces it would be chaos.
 - **You can't leave any of your kings in check.** With several kings, every one of them must be safe after your move.
 - **Checkmate / stalemate:** no legal moves while a king is attacked = you lose. No legal moves and no king attacked = draw. Threefold repetition and the 50-move rule are draws too.
@@ -41,6 +41,7 @@ There is **no game server**. The whole game is one static file (`index.html`):
 
 - **Hosting:** Cloudflare Pages (free tier) serves the static site.
 - **Multiplayer:** peer-to-peer WebRTC via [PeerJS](https://peerjs.com/)'s free public broker (`0.peerjs.com`). Room codes are PeerJS peer IDs; moves travel directly between the two browsers. Nothing about your game is stored anywhere.
+- **Sync that heals itself:** every move sends the full board state (not just the move), the other side acknowledges it, unacknowledged states are resent automatically, the joiner keeps asking for the board until it arrives, and both sides compare board fingerprints every few seconds — a lost message repairs itself instead of desyncing the game. Proven by `test/sync.test.js`, which runs two copies of the real page script over a fake network that drops messages.
 - **Cost:** $0. No database, no backend to keep awake, no accounts.
 
 Because the game is fully client-side, it also works offline for bot and local games (once loaded).

@@ -42,7 +42,7 @@ check('200 seeds: exactly 16 pieces/side, only on ranks 1-2 / 7-8, correct colou
 {
   // distribution: piece types actually vary, kings vary incl. 0 and multiples
   const kingCounts = new Set(); let sawZero = false, sawMulti = false, sawQueen = false;
-  allSeeds(500, s => {
+  allSeeds(2000, s => {
     const { board } = E.genSetup('pieces', s);
     const k = E.countKings(board, 'w'); kingCounts.add(k);
     if (k === 0) sawZero = true; if (k > 1) sawMulti = true;
@@ -79,6 +79,43 @@ console.log('Mode 2 — RANDOM EVERYTHING:');
   check('total pieces vary (min ' + minTotal + ', max ' + maxTotal + ')', minTotal < 10 && maxTotal > 50);
   check('some boards nearly empty / very full', sawEmpty || maxTotal > 50);
   check('some boards have zero kings on both sides', sawZeroKingsBoth);
+}
+
+console.log('First-king weighting (both modes):');
+{
+  // Random Pieces: 0 kings per side should be rare but still possible.
+  // Nominal: 0.15 unforced x (5/6)^16 ~= 0.8% per side (was ~5.4%).
+  let zeroW = 0; const N = 3000;
+  for (let s = 1; s <= N; s++) if (E.countKings(E.genSetup('pieces', s).board, 'w') === 0) zeroW++;
+  const rate = zeroW / N;
+  check('Random Pieces: 0 white kings is rare but possible (' + zeroW + '/' + N + ' = ' + (rate * 100).toFixed(2) + '%)', rate > 0.001 && rate < 0.03, 'rate ' + rate);
+  // RANDOM EVERYTHING: sides with pieces but no king are usually given one.
+  let withPieces = 0, kingless = 0, emptySide = 0;
+  for (let s = 1; s <= N; s++) {
+    const b = E.genSetup('everything', s).board;
+    const n = E.countPieces(b, 'w');
+    if (n === 0) { emptySide++; continue; }
+    withPieces++;
+    if (E.countKings(b, 'w') === 0) kingless++;
+  }
+  const kRate = kingless / withPieces;
+  check('RANDOM EVERYTHING: kingless-but-has-pieces is rare but possible (' + kingless + '/' + withPieces + ' = ' + (kRate * 100).toFixed(2) + '%, empty sides: ' + emptySide + ')', kingless > 0 && kRate < 0.05, 'rate ' + kRate);
+}
+
+console.log('No game is born checkmated / stalemated:');
+{
+  let bad = 0;
+  for (let s = 1; s <= 500; s++) {
+    for (const mode of ['pieces', 'everything']) {
+      const st = E.newGame(mode, s * 131 + 7);
+      const wk = E.countKings(st.board, 'w'), bk = E.countKings(st.board, 'b');
+      if (st.over && wk > 0 && bk > 0) bad++;
+    }
+  }
+  check('1000 new games: none over at start while both sides have kings', bad === 0, bad + ' born-mated');
+  const a = JSON.stringify(E.newGame('pieces', 42).board);
+  const b = JSON.stringify(E.newGame('pieces', 42).board);
+  check('newGame is deterministic (same seed, same board incl. re-rolls)', a === b);
 }
 
 console.log('Win / loss rules:');
@@ -153,13 +190,13 @@ console.log('Full random games terminate sensibly (bot vs bot):');
     try {
       const st = E.newGame(s % 2 ? 'pieces' : 'everything', s * 7919);
       let guard = 0;
-      while (!st.over && guard < 400) {
+      while (!st.over && guard < 2000) {
         const m = E.botMove(st, 'medium');
         if (!m) break;
         E.doMove(st, m); guard++;
       }
       if (st.over) { if (st.winner) wins++; else draws++; }
-      else { errors++; console.log('  (seed ' + s + ' did not finish in 400 plies — likely repetition guard)'); }
+      else { errors++; console.log('  (seed ' + s + ' did not finish in 2000 plies — likely repetition guard)'); }
     } catch (e) { errors++; console.log('  ERROR seed ' + s + ': ' + e.message); }
   }
   check('30 bot-vs-bot games: 0 engine errors', errors === 0);

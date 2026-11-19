@@ -131,11 +131,13 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
     <h2>How RNG Chess works</h2>
     <ul>
       <li><b>Win by killing kings.</b> If a side has several kings, <b>all</b> of them must be captured. Capturing one just thins the herd.</li>
-      <li><b>No king at the start = instant loss.</b> The dice can be cruel. Re-roll with a new game.</li>
+      <li><b>No king at the start = instant loss.</b> The dice are weighted so each side <b>usually</b> starts with at least one king — but a kingless start is still possible. Re-roll with a new game.</li>
+      <li><b>Every game starts playable.</b> If a roll would open checkmated or stalemated, the dice re-roll until White has a legal move.</li>
       <li><b>Normal chess moves otherwise.</b> Pawns, knights, bishops, rooks, queens and kings all move the usual way. Pawns promote on the last rank (you pick). En passant works. There is <b>no castling</b> — with random pieces it would be chaos.</li>
       <li><b>You can't leave any of your kings in check.</b> With several kings, every one of them must be safe after your move.</li>
       <li><b>Checkmate / stalemate:</b> no legal moves while a king is attacked = you lose. No legal moves and no king attacked = draw. Repetition and the 50-move rule are draws too.</li>
       <li><b>White moves first.</b> The room creator plays White (colours swap on rematch).</li>
+    <li><b>Moves always arrive.</b> Every move sends the full board, the other side confirms it, and both sides compare notes every few seconds — if a move ever gets lost, the boards repair themselves.</li>
     </ul>
   </div>
 </div>
@@ -208,6 +210,16 @@ function randomSeed(){ if (typeof crypto!=='undefined' && crypto.getRandomValues
 function shuffle(arr,rng){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); const t=arr[i]; arr[i]=arr[j]; arr[j]=t; } return arr; }
 
 /* ---- setup generation: the heart of RNG Chess ---- */
+// First-king weighting (both modes): each side usually (85%) gets at least
+// one king. Only the FIRST king is weighted — extra kings still come only
+// from the uniform roll, and 0 kings stays possible (the 15% unforced case,
+// or a side with no pieces at all in RANDOM EVERYTHING).
+function maybeForceFirstKing(board,color,squares,rng){
+  if(rng()<0.85){
+    const s=squares[Math.floor(rng()*squares.length)];
+    board[s]={t:'K',c:color};
+  }
+}
 function genSetup(mode, seed){
   const rng = mulberry32(seed>>>0);
   const board = new Array(64).fill(null);
@@ -218,6 +230,11 @@ function genSetup(mode, seed){
       board[6*8+c]={t:pick(),c:'w'}; board[7*8+c]={t:pick(),c:'w'};
       board[0*8+c]={t:pick(),c:'b'}; board[1*8+c]={t:pick(),c:'b'};
     }
+    const whiteSlots=[], blackSlots=[];
+    for(let i=48;i<64;i++) whiteSlots.push(i);
+    for(let i=0;i<16;i++) blackSlots.push(i);
+    maybeForceFirstKing(board,'w',whiteSlots,rng);
+    maybeForceFirstKing(board,'b',blackSlots,rng);
   } else {
     // RANDOM EVERYTHING: random total (0-64), random split, random squares, random types.
     const total = Math.floor(rng()*65);
@@ -230,6 +247,14 @@ function genSetup(mode, seed){
     // A pawn spawned on the last rank auto-promotes to queen (no illegal position).
     for(let i=0;i<64;i++){ const p=board[i]; if(!p||p.t!=='P') continue; const r=(i/8)|0;
       if((p.c==='w'&&r===0)||(p.c==='b'&&r===7)) p.t='Q'; }
+    // First-king weighting: a side with pieces but no king usually (85%)
+    // gets one random piece turned into a king. Only the first king.
+    for(const color of ['w','b']){
+      const mine=[]; for(let i=0;i<64;i++) if(board[i]&&board[i].c===color) mine.push(i);
+      if(mine.length>0 && countKings(board,color)===0 && rng()<0.85){
+        board[mine[Math.floor(rng()*mine.length)]].t='K';
+      }
+    }
   }
   return {board, mode, seed};
 }
@@ -329,10 +354,25 @@ function evaluate(st){
   return {over:false,winner:null,reason:''};
 }
 function newGame(mode,seed,boardOverride){
-  const setup=boardOverride?{board:boardOverride,mode,seed}:genSetup(mode,seed);
-  const st={mode,seed,board:setup.board,turn:'w',ep:-1,halfmove:0,fullmove:1,over:false,winner:null,reason:'',history:[],posCounts:{}};
-  st.posCounts[posKey(st.board,'w',-1)]=1;
-  const ev=evaluate(st); st.over=ev.over; st.winner=ev.winner; st.reason=ev.reason;
+  if(boardOverride){
+    const st={mode,seed,board:boardOverride,turn:'w',ep:-1,halfmove:0,fullmove:1,over:false,winner:null,reason:'',history:[],posCounts:{}};
+    st.posCounts[posKey(st.board,'w',-1)]=1;
+    const ev=evaluate(st); st.over=ev.over; st.winner=ev.winner; st.reason=ev.reason;
+    return st;
+  }
+  // Never start a game that is already checkmate/stalemate: re-roll the
+  // seed (deterministically, so host and guest still agree) until the side
+  // to move has a legal move. A 0-king instant loss is intended and kept.
+  let s=seed>>>0, st=null;
+  for(let attempt=0; attempt<100; attempt++){
+    const setup=genSetup(mode,s);
+    st={mode,seed:s,board:setup.board,turn:'w',ep:-1,halfmove:0,fullmove:1,over:false,winner:null,reason:'',history:[],posCounts:{}};
+    st.posCounts[posKey(st.board,'w',-1)]=1;
+    const ev=evaluate(st); st.over=ev.over; st.winner=ev.winner; st.reason=ev.reason;
+    const wk=countKings(st.board,'w'), bk=countKings(st.board,'b');
+    if(!(st.over&&wk>0&&bk>0)) break;
+    s=(s+0x9E3779B9)>>>0;
+  }
   return st;
 }
 function doMove(st,req){
@@ -383,6 +423,8 @@ let soundOn=true;
 let selected=-1, legalCache=[];
 let peer=null, conn=null, isHost=false, roomCode=null, waitingForGuest=false;
 let pendingPromo=null;
+let lastAckedN=-1, resendTimer=null, heartbeatTimer=null, helloTimer=null, stateReceived=false;
+function boardHashOf(st){ let h=5381; const s=posKey(st.board,st.turn,st.ep)+'|'+st.history.length; for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))>>>0; return h; }
 const $=id=>document.getElementById(id);
 const myName=()=>($('nameInput').value||'').trim()||'Player';
 
@@ -482,7 +524,7 @@ function finishMove(from,to,promotion){
   if(!mv){ render(); return; }
   beep(mv&&state.history[state.history.length-1].captured?180:440,0.12);
   render();
-  if(playMode==='online'&&conn&&conn.open) send({t:'move',move:mv});
+  if(playMode==='online') sendState(); // full board, ack-tracked — not a fire-and-forget delta
   if(playMode==='bot'&&!state.over&&state.turn==='b'){
     setTimeout(()=>{ const bm=botMove(state,botLevel); if(bm){ doMove(state,bm); beep(330,0.1); render(); } },450);
   }
@@ -493,6 +535,8 @@ function startGame(m,seed,opts){
   opts=opts||{};
   playMode=opts.playMode||'local'; myColor=opts.myColor||null; isHost=!!opts.isHost; roomCode=opts.roomCode||null;
   state=newGame(m,seed,opts.board||null);
+  lastAckedN=-1; clearTimeout(resendTimer); stateReceived=(playMode!=='online'||isHost);
+  startHeartbeat();
   flipped=(myColor==='b');
   selected=-1; legalCache=[]; hideOver();
   show('menuScreen',false); show('gameScreen',true);
@@ -506,6 +550,8 @@ function backToMenu(){
   try{ if(conn) conn.close(); }catch(e){}
   try{ if(peer) peer.destroy(); }catch(e){}
   peer=null; conn=null; roomCode=null; waitingForGuest=false;
+  stopHeartbeat(); stopHelloLoop(); clearTimeout(resendTimer);
+  setMenuMsg('');
   hideOver(); show('gameScreen',false); show('menuScreen',true);
 }
 $('btnMenu').onclick=backToMenu;
@@ -545,31 +591,104 @@ function requestRematch(){
 function peerIdFor(code){ return 'rngchess-v1-'+code.toUpperCase(); }
 function makeCode(){ const chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<4;i++) s+=chars[Math.floor(Math.random()*chars.length)]; return s; }
 function send(obj){ try{ if(conn&&conn.open) conn.send(obj); }catch(e){} }
+/* ---- self-healing sync: full state + ack/resend + hello + heartbeat ----
+   A single lost message used to desync both boards forever (and the
+   receiver silently dropped moves that didn't match its stale board).
+   Now every move carries the whole board, must be acknowledged, is
+   resent until it is, and both sides compare fingerprints every 4s. */
+function sendState(){
+  if(!state) return;
+  send({t:'state',state:serializeState(state)});
+  armResend();
+}
+function armResend(){
+  clearTimeout(resendTimer);
+  const n=state.history.length; let tries=0;
+  const tick=()=>{
+    if(!state||!conn||!conn.open) return;
+    if(lastAckedN>=n||state.history.length!==n) return;
+    if(tries>=6) return;
+    tries++;
+    send({t:'state',state:serializeState(state)});
+    resendTimer=setTimeout(tick,1500);
+  };
+  resendTimer=setTimeout(tick,1500);
+}
+// Adopt an incoming full state. Newer always wins; on a tie the host wins.
+function adoptState(s){
+  if(!s||!state) return false;
+  const incoming=deserializeState(s);
+  const inN=incoming.history.length, myN=state.history.length;
+  const same=boardHashOf(state)===boardHashOf(incoming);
+  if(inN<myN){ sendState(); return false; }                    // sender is behind: heal them
+  if(inN===myN&&same){ send({t:'ack',n:inN}); return false; } // already in sync
+  if(inN===myN&&!same&&isHost){ sendState(); return false; }  // tie: host wins, I'm host
+  state=incoming; selected=-1; legalCache=[]; stateReceived=true;
+  send({t:'ack',n:inN});
+  render();
+  return true;
+}
+function startFromState(s){
+  startGame(s.mode,s.seed,{playMode:'online',myColor:'b',isHost:false,roomCode,connText:'Online game — you are <b>Black</b>. White moves first.'});
+  state=deserializeState(s);
+  stateReceived=true; send({t:'ack',n:state.history.length}); render();
+}
+function startHeartbeat(){
+  stopHeartbeat();
+  if(playMode!=='online') return;
+  heartbeatTimer=setInterval(()=>{
+    if(!state||!conn||!conn.open) return;
+    send({t:'ping',n:state.history.length,hash:boardHashOf(state)});
+  },4000);
+}
+function stopHeartbeat(){ clearInterval(heartbeatTimer); heartbeatTimer=null; }
+function startHelloLoop(){
+  stopHelloLoop();
+  helloTimer=setInterval(()=>{ if(!stateReceived) send({t:'hello'}); else stopHelloLoop(); },2000);
+  send({t:'hello'});
+}
+function stopHelloLoop(){ clearInterval(helloTimer); helloTimer=null; }
 function attachConn(c,asHost){
   conn=c;
   c.on('data',msg=>handleMsg(msg,asHost));
-  c.on('close',()=>{ if(state&&!state.over){ $('connBox').innerHTML='<b>Opponent disconnected.</b> You can keep looking at the board, or head back to the menu for a new game.'; } });
+  c.on('close',()=>{ stopHeartbeat(); stopHelloLoop(); if(state&&!state.over){ $('connBox').innerHTML='<b>Opponent disconnected.</b> You can keep looking at the board, or head back to the menu for a new game.'; } });
   c.on('error',()=>{});
   c.on('open',()=>{
     $('connBox').innerHTML='<b>Connected!</b> '+(asHost?'Your friend joined. You are White.':'You joined. You are Black.');
-    if(asHost){ // host sends the rolled setup; guest adopts it
-      const setup={t:'setup',mode:state.mode,seed:state.seed,board:state.board};
-      send(setup);
-    }
+    if(asHost){ sendState(); }                 // full state, ack-tracked — guest adopts it
+    else { stateReceived=false; startHelloLoop(); } // keep asking until the board arrives
   });
 }
 function handleMsg(msg,asHost){
   if(!msg||typeof msg!=='object') return;
-  if(msg.t==='setup'&&!asHost){
-    startGame(msg.mode,msg.seed,{playMode:'online',myColor:'b',isHost:false,roomCode,connText:'Online game — you are <b>Black</b>. White moves first.'});
-    // adopt the host's exact board (same seed, but trust the wire)
-    state.board=msg.board.map(p=>p?{t:p.t,c:p.c}:null);
-    const ev=evaluate(state); state.over=ev.over; state.winner=ev.winner; state.reason=ev.reason; render();
+  if(msg.t==='hello'){ if(state) sendState(); }
+  else if(msg.t==='ack'){ if(typeof msg.n==='number'&&msg.n>lastAckedN) lastAckedN=msg.n; }
+  else if(msg.t==='need-sync'){ sendState(); }
+  else if(msg.t==='ping'){
+    if(!state) return;
+    const myN=state.history.length, myH=boardHashOf(state);
+    if(msg.n>myN) send({t:'need-sync'});
+    else if(msg.n<myN) sendState();
+    else if(msg.hash!==myH){ if(isHost) sendState(); else send({t:'need-sync'}); }
+  }
+  else if(msg.t==='state'){
+    if(!state) startFromState(msg.state);
+    else adoptState(msg.state);
+  }
+  else if(msg.t==='setup'&&!asHost){
+    // legacy one-shot setup: treat it as a fresh state
+    const s={mode:msg.mode,seed:msg.seed,board:msg.board,turn:'w',ep:-1,halfmove:0,fullmove:1,history:[],posCounts:{},over:false,winner:null,reason:''};
+    s.posCounts[posKey(s.board,'w',-1)]=1;
+    if(!state) startFromState(s);
+    else adoptState(s);
   } else if(msg.t==='move'){
-    const mv=doMove(state,msg.move); if(mv){ beep(330,0.1); render(); }
-    else if(asHost){ send({t:'state',state:serializeState(state)}); } // resync a confused guest
-  } else if(msg.t==='state'){
-    state=deserializeState(msg.state); selected=-1; legalCache=[]; render();
+    // legacy bare-delta fallback: apply it, or ask for the full board
+    if(!state){ send({t:'need-sync'}); }
+    else {
+      const mv=doMove(state,msg.move);
+      if(mv){ beep(330,0.1); render(); send({t:'ack',n:state.history.length}); }
+      else send({t:'need-sync'});
+    }
   } else if(msg.t==='resign'){
     state.over=true; state.winner=opp(msg.by); state.reason=(msg.by==='w'?'White':'Black')+' resigned.'; render();
   } else if(msg.t==='rematch'){
