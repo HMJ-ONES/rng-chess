@@ -16,10 +16,10 @@ Piece count is random. Piece types are random. Squares are random. No limits. A 
 
 ### The rules that make it work
 - **Win by killing kings.** If a side has several kings, **all** of them must be captured. Capturing one just thins the herd.
-- **The dice are weighted:** each side usually (85%) starts with at least one king — only the first king is weighted, and a kingless start is still possible. Boards that would open checkmated or stalemated are re-rolled until White has a legal move, so every game starts playable.
+- **The dice are weighted:** each side usually (85%) starts with at least one king — only the first king is weighted, and a kingless start is still possible. Boards that would open with White having no move at all are re-rolled until White has a legal move, so every game starts playable.
 - **Otherwise, normal chess.** Pawns, knights, bishops, rooks, queens and kings move the usual way. Pawns promote on the last rank (you pick the piece). En passant works. There is **no castling** — with random pieces it would be chaos.
-- **You can't leave any of your kings in check.** With several kings, every one of them must be safe after your move.
-- **Checkmate / stalemate:** no legal moves while a king is attacked = you lose. No legal moves and no king attacked = draw. Threefold repetition and the 50-move rule are draws too.
+- **Kings are captured like any other piece.** If your king is attacked and you don't save it, it dies — you lose only when your last king falls. There is no checkmate.
+- **Only the last king matters:** the game ends only when a side loses its last king. If a side has no moves at all, that's stalemate — a draw. Threefold repetition and the 50-move rule are draws too.
 - **White moves first.** The room creator plays White; colours swap on rematch.
 - Every setup is generated from a visible **seed**, so a board can be reproduced and verified.
 

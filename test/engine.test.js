@@ -102,7 +102,7 @@ console.log('First-king weighting (both modes):');
   check('RANDOM EVERYTHING: kingless-but-has-pieces is rare but possible (' + kingless + '/' + withPieces + ' = ' + (kRate * 100).toFixed(2) + '%, empty sides: ' + emptySide + ')', kingless > 0 && kRate < 0.05, 'rate ' + kRate);
 }
 
-console.log('No game is born checkmated / stalemated:');
+console.log('No game is born with no moves at all:');
 {
   let bad = 0;
   for (let s = 1; s <= 500; s++) {
@@ -145,19 +145,38 @@ console.log('Win / loss rules:');
   const st2 = E.newGame('pieces', 1, board2);
   const mv2 = E.doMove(st2, { from: 56, to: 0 });
   check('capturing 1 of 2 kings does NOT end game', !!mv2 && !st2.over && E.countKings(st2.board, 'b') === 1);
+  // User's bug (Nov 19, v1.2): capturing one king must NOT end the game
+  // even when the remaining king is attacked with every escape covered.
+  // White: K e1, R a1, B c3, P g6. Black: K a8, K h8. White Rxa8 leaves
+  // Kh8 attacked by the rook (rank) and bishop (diagonal); g8 is covered
+  // by the rook, g7 by the bishop, h7 by the pawn. Under the old checkmate
+  // rule this ended the game with a black king still alive.
+  const board3 = new Array(64).fill(null);
+  board3[60] = { t: 'K', c: 'w' }; board3[56] = { t: 'R', c: 'w' };
+  board3[42] = { t: 'B', c: 'w' }; board3[22] = { t: 'P', c: 'w' };
+  board3[0] = { t: 'K', c: 'b' }; board3[7] = { t: 'K', c: 'b' };
+  const st3 = E.newGame('pieces', 1, board3);
+  const mv3 = E.doMove(st3, { from: 56, to: 0 });
+  check('capturing 1 of 2 kings does NOT end game even when the other king is attacked on all escapes', !!mv3 && !st3.over && E.countKings(st3.board, 'b') === 1);
+  check('the attacked king still has moves to play on', E.legalMoves(st3).length > 0);
 }
 
 console.log('Move legality:');
 {
-  // Standard-ish position: white K e1, white P e2, black K e8, black R e7? No — use a pin test:
-  // White K e1, white N e2 pinned by black R e8 down the file; N e2->g3 must be illegal.
+  // No check restriction (v1.2): a "pinned" piece may move, leaving the
+  // king in check — and the king can then be captured like any other piece.
+  // White K e1, white N e2 pinned by black R e8 down the file.
   const board = new Array(64).fill(null);
   board[60] = { t: 'K', c: 'w' }; board[52] = { t: 'N', c: 'w' };
-  board[4] = { t: 'K', c: 'b' }; board[12] = { t: 'R', c: 'b' };
+  board[0] = { t: 'K', c: 'b' }; board[12] = { t: 'R', c: 'b' };
   const st = E.newGame('pieces', 1, board);
   const moves = E.legalMoves(st);
   const knightMoves = moves.filter(m => m.from === 52);
-  check('pinned knight has no legal moves', knightMoves.length === 0, 'got ' + knightMoves.length);
+  check('pinned knight CAN move (no check restriction)', knightMoves.length > 0, 'got ' + knightMoves.length);
+  const ng3 = E.doMove(st, { from: 52, to: 46 });
+  check('knight moves off the file', !!ng3);
+  const rxk = E.doMove(st, { from: 12, to: 60 });
+  check('rook captures the king left in check — black wins', !!rxk && st.over && st.winner === 'b' && E.countKings(st.board, 'w') === 0);
   // Knight moves exist when not pinned
   const boardB = new Array(64).fill(null);
   boardB[60] = { t: 'K', c: 'w' }; boardB[52] = { t: 'N', c: 'w' }; boardB[4] = { t: 'K', c: 'b' };

@@ -11,6 +11,12 @@ const blocks = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]
 const engineSrc = blocks.find(s => s.includes('module.exports'));
 const uiSrc = blocks.find(s => s.includes('attachConn'));
 
+// NOTE: this fake DOM does NOT model innerHTML destroying child elements,
+// so a UI null-deref that only happens in a real browser (e.g. the v1.1
+// `$('statusSub')` crash — statusBox's innerHTML wiped out #statusSub, so
+// every render() threw and the bot's timeout was never scheduled) cannot be
+// caught here. UI crashes need a real-browser check; engine rules are fully
+// covered by test/engine.test.js instead.
 function makeEl() {
   return {
     style: {}, dataset: {}, children: [], _l: {},

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RNG Chess v1.1 — self-healing sync, weighted first king, playable starts -->
+<!-- RNG Chess v1.2 — kill-all-kings rules, bot crash fix, square board -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -48,8 +48,8 @@ select{background:#0c0e12;border:1px solid var(--line);color:var(--txt);border-r
 .game-layout{display:grid;grid-template-columns:minmax(0,640px) 340px;gap:16px;align-items:start;margin-top:12px}
 @media(max-width:900px){.game-layout{grid-template-columns:1fr}}
 .board-wrap{position:relative;width:100%;max-width:640px;margin:0 auto}
-.board{display:grid;grid-template-columns:repeat(8,1fr);width:100%;aspect-ratio:1/1;border-radius:10px;overflow:hidden;border:3px solid #3a2f26;box-shadow:0 10px 40px rgba(0,0,0,.5);user-select:none;-webkit-user-select:none;touch-action:manipulation}
-.sq{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.board{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);width:100%;aspect-ratio:1/1;border-radius:10px;overflow:hidden;border:3px solid #3a2f26;box-shadow:0 10px 40px rgba(0,0,0,.5);user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.sq{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;min-width:0;min-height:0}
 .sq.light{background:var(--light)}
 .sq.dark{background:var(--dark)}
 .sq .pc{font-size:clamp(28px,7.2vw,52px);line-height:1;pointer-events:none;z-index:2}
@@ -133,10 +133,10 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
     <ul>
       <li><b>Win by killing kings.</b> If a side has several kings, <b>all</b> of them must be captured. Capturing one just thins the herd.</li>
       <li><b>No king at the start = instant loss.</b> The dice are weighted so each side <b>usually</b> starts with at least one king — but a kingless start is still possible. Re-roll with a new game.</li>
-      <li><b>Every game starts playable.</b> If a roll would open checkmated or stalemated, the dice re-roll until White has a legal move.</li>
+      <li><b>Every game starts playable.</b> If a roll would open with White having no move at all, the dice re-roll until White has a legal move.</li>
       <li><b>Normal chess moves otherwise.</b> Pawns, knights, bishops, rooks, queens and kings all move the usual way. Pawns promote on the last rank (you pick). En passant works. There is <b>no castling</b> — with random pieces it would be chaos.</li>
-      <li><b>You can't leave any of your kings in check.</b> With several kings, every one of them must be safe after your move.</li>
-      <li><b>Checkmate / stalemate:</b> no legal moves while a king is attacked = you lose. No legal moves and no king attacked = draw. Repetition and the 50-move rule are draws too.</li>
+      <li><b>Kings are captured like any other piece.</b> If your king is attacked and you don't save it, it dies — you lose only when your last king falls. There is no checkmate.</li>
+      <li><b>Only the last king matters:</b> the game ends only when a side loses its last king. If a side has no moves at all, that's stalemate — a draw. Repetition and the 50-move rule are draws too.</li>
       <li><b>White moves first.</b> The room creator plays White (colours swap on rematch).</li>
     <li><b>Moves always arrive.</b> Every move sends the full board, the other side confirms it, and both sides compare notes every few seconds — if a move ever gets lost, the boards repair themselves.</li>
     </ul>
@@ -176,7 +176,7 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
   </div>
 </div>
 
-<footer> RNG Chess v1.1 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>
+<footer> RNG Chess v1.2 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>
 Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.</footer>
 </div>
 
@@ -326,29 +326,21 @@ function applyMoveToBoard(board,move){
   return {board:nb, captured, ep:newEp};
 }
 function legalMoves(state){
-  const pseudo=pseudoMoves(state.board,state.turn,state.ep);
-  const out=[];
-  for(const m of pseudo){
-    const nb=applyMoveToBoard(state.board,m).board;
-    let safe=true;
-    for(const k of kingsOf(nb,state.turn)){
-      if(isAttacked(nb,(k/8)|0,k%8,opp(state.turn))){ safe=false; break; }
-    }
-    if(safe) out.push(m);
-  }
-  return out;
+  // RNG Chess rule: the game ends ONLY when a side loses its last king.
+  // There is no checkmate — a king may be left in check (and captured on
+  // the next move), so every pseudo-legal move is legal.
+  return pseudoMoves(state.board,state.turn,state.ep);
 }
 function posKey(board,turn,ep){ let s=''; for(const p of board) s+=p?p.c+p.t:'..'; return s+turn+(ep>=0?('e'+ep):''); }
 function evaluate(st){
   const wk=countKings(st.board,'w'), bk=countKings(st.board,'b');
-  if(wk===0&&bk===0) return {over:true,winner:null,reason:'Both sides rolled zero kings. Draw — re-roll!'};
-  if(wk===0) return {over:true,winner:'b',reason:'White started with no king. Black wins by default!'};
-  if(bk===0) return {over:true,winner:'w',reason:'Black started with no king. White wins by default!'};
+  if(wk===0&&bk===0) return {over:true,winner:null,reason:'No kings left on either side. Draw — re-roll!'};
+  if(wk===0) return {over:true,winner:'b',reason:'White has no king left. Black wins!'};
+  if(bk===0) return {over:true,winner:'w',reason:'Black has no king left. White wins!'};
   const moves=legalMoves(st);
   if(moves.length===0){
-    const inChk=kingsOf(st.board,st.turn).some(k=>isAttacked(st.board,(k/8)|0,k%8,opp(st.turn)));
-    if(inChk) return {over:true,winner:opp(st.turn),reason:(st.turn==='w'?'White':'Black')+' has a king in check with no legal move — checkmate!'};
-    return {over:true,winner:null,reason:'Stalemate — no legal moves. Draw.'};
+    // No checkmate in RNG Chess: with no moves at all it is stalemate.
+    return {over:true,winner:null,reason:'No legal moves at all — stalemate. Draw.'};
   }
   if(st.halfmove>=100) return {over:true,winner:null,reason:'Fifty-move rule — draw.'};
   if((st.posCounts[posKey(st.board,st.turn,st.ep)]||0)>=3) return {over:true,winner:null,reason:'Same position three times — draw.'};
@@ -361,9 +353,11 @@ function newGame(mode,seed,boardOverride){
     const ev=evaluate(st); st.over=ev.over; st.winner=ev.winner; st.reason=ev.reason;
     return st;
   }
-  // Never start a game that is already checkmate/stalemate: re-roll the
+  // Never start a game in which White has no move at all: re-roll the
   // seed (deterministically, so host and guest still agree) until the side
   // to move has a legal move. A 0-king instant loss is intended and kept.
+  // (There is no checkmate in RNG Chess — only losing your last king ends
+  // a game — so the re-roll only guards against a no-moves start.)
   let s=seed>>>0, st=null;
   for(let attempt=0; attempt<100; attempt++){
     const setup=genSetup(mode,s);
@@ -424,6 +418,7 @@ let soundOn=true;
 let selected=-1, legalCache=[];
 let peer=null, conn=null, isHost=false, roomCode=null, waitingForGuest=false;
 let pendingPromo=null;
+let gameId=0; // increments every startGame; bot timeouts check it so a stale timeout never moves in a newer game
 let lastAckedN=-1, resendTimer=null, heartbeatTimer=null, helloTimer=null, stateReceived=false;
 function boardHashOf(st){ let h=5381; const s=posKey(st.board,st.turn,st.ep)+'|'+st.history.length; for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))>>>0; return h; }
 const $=id=>document.getElementById(id);
@@ -474,7 +469,6 @@ function render(){
   } else {
     $('statusBox').innerHTML=turnName+' to move'+(inChk?' — CHECK!':'')+'<small>'+(playMode==='online'?(myColor===state.turn?'Your move.':'Waiting for opponent…'):(playMode==='bot'?(state.turn==='b'?'Bot is thinking…':'Your move.'):''))+'</small>';
   }
-  $('statusSub').textContent='';
   $('kingsBox').innerHTML='<span class="king-pill'+(wk===0?' dead':'')+'">♔ White kings: '+wk+'</span><span class="king-pill'+(bk===0?' dead':'')+'">♚ Black kings: '+bk+'</span><span class="king-pill">Seed '+state.seed+'</span><span class="king-pill">'+(state.mode==='pieces'?'Random Pieces':'RANDOM EVERYTHING')+'</span>';
   const capW=[], capB=[];
   for(const h of state.history){ if(h.captured){ (h.color==='w'?capW:capB).push(GLYPH[opp(h.color)][h.captured]); } }
@@ -527,7 +521,10 @@ function finishMove(from,to,promotion){
   render();
   if(playMode==='online') sendState(); // full board, ack-tracked — not a fire-and-forget delta
   if(playMode==='bot'&&!state.over&&state.turn==='b'){
-    setTimeout(()=>{ const bm=botMove(state,botLevel); if(bm){ doMove(state,bm); beep(330,0.1); render(); } },450);
+    // Guard the delayed move to THIS game: if the player hits Rematch or
+    // Menu inside the 450ms, the timeout must not move in the new game.
+    const gid=gameId;
+    setTimeout(()=>{ if(gid!==gameId||!state||state.over||state.turn!=='b') return; const bm=botMove(state,botLevel); if(bm){ doMove(state,bm); beep(330,0.1); render(); } },450);
   }
 }
 
@@ -536,6 +533,7 @@ function startGame(m,seed,opts){
   opts=opts||{};
   playMode=opts.playMode||'local'; myColor=opts.myColor||null; isHost=!!opts.isHost; roomCode=opts.roomCode||null;
   state=newGame(m,seed,opts.board||null);
+  gameId++;
   lastAckedN=-1; clearTimeout(resendTimer); stateReceived=(playMode!=='online'||isHost);
   startHeartbeat();
   flipped=(myColor==='b');
