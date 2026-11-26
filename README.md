@@ -16,7 +16,8 @@ Piece count is random. Piece types are random. Squares are random. No limits. A 
 
 ### The rules that make it work
 - **Win by killing kings.** If a side has several kings, **all** of them must be captured. Capturing one just thins the herd.
-- **King counts follow a discretized Rayleigh distribution** with continuous mean 1. Each side with pieces has a 5% chance of zero kings. One king is the most common result, and higher counts are progressively rarer. An empty side always has zero kings. Boards with kings on both sides and no opening move for White are re-rolled up to the 100-attempt limit.
+- **King counts follow a discretized Rayleigh distribution** with continuous mean 1. Before opening filters, each side with pieces has a 5% chance of zero kings. One king is the most common result, and higher counts are progressively rarer. An empty side always has zero kings.
+- **Opening filter.** A roll is discarded if any king starts in check or both sides have kings and White has no move. If any first White move can put a king in check, the roll has a 10% chance of being accepted. Replacement boards must give both sides a king. After 1,000 rejected rolls, the game asks the player to try again.
 - **Otherwise, normal chess.** Pawns, knights, bishops, rooks, queens and kings move the usual way. Pawns promote on the last rank (you pick the piece). En passant works. There is **no castling** — with random pieces it would be chaos.
 - **Kings are captured like any other piece.** If your king is attacked and you don't save it, it dies — you lose only when your last king falls. There is no checkmate.
 - **Only the last king matters:** the game ends only when a side loses its last king. If a side has no moves at all, that's stalemate — a draw. Threefold repetition and the 50-move rule are draws too.

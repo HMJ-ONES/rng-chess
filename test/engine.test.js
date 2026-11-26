@@ -152,17 +152,35 @@ console.log('Advanced piece distributions:');
   }
 }
 
-console.log('No game is born with no moves at all:');
+console.log('Opening filter:');
 {
-  let bad = 0;
+  const board = Array(64).fill(null);
+  board[0] = {t:'K', c:'b'};
+  board[63] = {t:'K', c:'w'};
+  check('safe opening is accepted regardless of the threat roll', E.acceptsOpening(board, 0.99));
+  board[57] = {t:'R', c:'w'};
+  check('a potential first-move check is accepted only below 10%',
+    E.acceptsOpening(board, 0.099) && !E.acceptsOpening(board, 0.10));
+  board[56] = board[57];
+  board[57] = null;
+  check('a king already in check rejects even a passing threat roll', !E.acceptsOpening(board, 0));
+}
+{
+  let bad = 0, checked = 0, kinglessReplacement = 0;
   for (let s = 1; s <= 500; s++) {
     for (const mode of ['pieces', 'everything']) {
-      const st = E.newGame(mode, s * 131 + 7);
+      const seed = s * 131 + 7;
+      const st = E.newGame(mode, seed);
       const wk = E.countKings(st.board, 'w'), bk = E.countKings(st.board, 'b');
       if (st.over && wk > 0 && bk > 0) bad++;
+      if (st.seed !== seed && (!wk || !bk)) kinglessReplacement++;
+      if (['w', 'b'].some(color => E.kingsOf(st.board, color).some(square =>
+        E.isAttacked(st.board, Math.floor(square / 8), square % 8, E.opp(color))))) checked++;
     }
   }
   check('1000 new games: none over at start while both sides have kings', bad === 0, bad + ' born-mated');
+  check('1000 new games: no king starts in check', checked === 0, checked + ' in check');
+  check('1000 new games: rerolls never create a kingless start', kinglessReplacement === 0);
   const a = JSON.stringify(E.newGame('pieces', 42).board);
   const b = JSON.stringify(E.newGame('pieces', 42).board);
   check('newGame is deterministic (same seed, same board incl. re-rolls)', a === b);

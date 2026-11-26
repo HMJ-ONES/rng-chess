@@ -149,7 +149,7 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
     <ul>
       <li><b>Win by killing kings.</b> If a side has several kings, <b>all</b> of them must be captured. Capturing one just thins the herd.</li>
       <li><b>No king at the start = instant loss.</b> With default settings, each side with pieces has a 5% chance of rolling zero kings. One king is the most common result.</li>
-      <li><b>Every game starts playable.</b> If a roll would open with White having no move at all, the dice re-roll until White has a legal move.</li>
+      <li><b>Opening rolls protect kings.</b> A board is re-rolled if any king starts in check or if both sides have kings and White has no move. If a first move can put a king in check, the board is re-rolled 90% of the time.</li>
       <li><b>Normal chess moves otherwise.</b> Pawns, knights, bishops, rooks, queens and kings all move the usual way. Pawns promote on the last rank (you pick). En passant works. There is <b>no castling</b> — with random pieces it would be chaos.</li>
       <li><b>Kings are captured like any other piece.</b> If your king is attacked and you don't save it, it dies — you lose only when your last king falls. There is no checkmate.</li>
       <li><b>Only the last king matters:</b> the game ends only when a side loses its last king. If a side has no moves at all, that's stalemate — a draw. Repetition and the 50-move rule are draws too.</li>
@@ -513,9 +513,12 @@ function calibrateReferenceShare(mode,config,type,target){
 }
 
 function genSetup(mode, seed, config){
+  return generateSetup(mode,seed,config&&buildComposition(config,mode==='pieces'?16:64));
+}
+
+function generateSetup(mode,seed,model){
   const rng = mulberry32(seed>>>0);
   const board = new Array(64).fill(null);
-  const model=config && buildComposition(config,mode==='pieces'?16:64);
   function place(color,squares){
     if(!model){ placePieces(board,color,squares,rng); return; }
     const types=customTypes(model,squares.length,rng);
@@ -628,29 +631,45 @@ function evaluate(st){
   if((st.posCounts[posKey(st.board,st.turn,st.ep)]||0)>=3) return {over:true,winner:null,reason:'Same position three times — draw.'};
   return {over:false,winner:null,reason:''};
 }
+function kingInCheck(board,color,kings){
+  return kings.some(square=>isAttacked(board,(square/8)|0,square%8,opp(color)));
+}
+
+const OPENING_ATTEMPTS=1000;
+function acceptsOpening(board,threatRoll){
+  const whiteKings=kingsOf(board,'w'), blackKings=kingsOf(board,'b');
+  if(kingInCheck(board,'w',whiteKings)||kingInCheck(board,'b',blackKings)) return false;
+  if(!whiteKings.length||!blackKings.length) return true;
+  const moves=pseudoMoves(board,'w',-1);
+  if(!moves.length) return false;
+  if(threatRoll<0.10) return true;
+  return !moves.some(move=>{
+    const exposed=reply=>{
+      const after=applyMoveToBoard(board,reply).board;
+      const whiteAfter=board[reply.from].t==='K'?whiteKings.map(square=>square===reply.from?reply.to:square):whiteKings;
+      return kingInCheck(after,'w',whiteAfter)||kingInCheck(after,'b',blackKings);
+    };
+    // Queen covers rook and bishop attack patterns. Knight promotion can add a separate threat.
+    return exposed(move)||(move.promotion&&exposed({...move,promotion:'N'}));
+  });
+}
+
 function newGame(mode,seed,boardOverride,config){
-  if(boardOverride){
-    const st={mode,seed,board:boardOverride,turn:'w',ep:-1,halfmove:0,fullmove:1,over:false,winner:null,reason:'',history:[],posCounts:{},config};
-    st.posCounts[posKey(st.board,'w',-1)]=1;
-    const ev=evaluate(st); st.over=ev.over; st.winner=ev.winner; st.reason=ev.reason;
-    return st;
-  }
-  // Never start a game in which White has no move at all: re-roll the
-  // seed (deterministically, so host and guest still agree) until the side
-  // to move has a legal move. A 0-king instant loss is intended and kept.
-  // (There is no checkmate in RNG Chess — only losing your last king ends
-  // a game — so the re-roll only guards against a no-moves start.)
-  let s=seed>>>0, st=null;
-  for(let attempt=0; attempt<100; attempt++){
-    const setup=genSetup(mode,s,config);
-    st={mode,seed:s,board:setup.board,turn:'w',ep:-1,halfmove:0,fullmove:1,over:false,winner:null,reason:'',history:[],posCounts:{},config};
-    st.posCounts[posKey(st.board,'w',-1)]=1;
-    const ev=evaluate(st); st.over=ev.over; st.winner=ev.winner; st.reason=ev.reason;
-    const wk=countKings(st.board,'w'), bk=countKings(st.board,'b');
-    if(!(st.over&&wk>0&&bk>0)) break;
+  const model=!boardOverride&&config&&buildComposition(config,mode==='pieces'?16:64);
+  let s=seed>>>0;
+  for(let attempt=0; attempt<OPENING_ATTEMPTS; attempt++){
+    const board=boardOverride||generateSetup(mode,s,model).board;
+    // Use a separate seeded draw so filtering does not change the board generator's stream.
+    // A rejected opening must not turn into an instant loss on a retry.
+    const canPlay=attempt===0||(countKings(board,'w')>0&&countKings(board,'b')>0);
+    if(boardOverride||(canPlay&&acceptsOpening(board,mulberry32(s^0x85EBCA6B)()))){
+      const st={mode,seed:s,board,turn:'w',ep:-1,halfmove:0,fullmove:1,history:[],posCounts:{},config};
+      st.posCounts[posKey(board,'w',-1)]=1;
+      return Object.assign(st,evaluate(st));
+    }
     s=(s+0x9E3779B9)>>>0;
   }
-  return st;
+  return null;
 }
 function doMove(st,req){
   if(st.over) return null;
@@ -685,7 +704,7 @@ function botMove(st,difficulty){
 }
 function serializeState(st){ return {mode:st.mode,seed:st.seed,board:st.board,turn:st.turn,ep:st.ep,halfmove:st.halfmove,fullmove:st.fullmove,history:st.history,posCounts:st.posCounts,over:st.over,winner:st.winner,reason:st.reason,...(st.config?{config:st.config}:{})}; }
 function deserializeState(s){ const st=Object.assign({},s); st.board=s.board.map(p=>p?{t:p.t,c:p.c}:null); return st; }
-if(typeof module!=='undefined'&&module.exports){ module.exports={TYPES,VAL,genSetup,countKings,countPieces,kingsOf,pieceCounts,isAttacked,pseudoMoves,applyMoveToBoard,legalMoves,posKey,evaluate,newGame,doMove,botMove,serializeState,deserializeState,mulberry32,sqName,opp,finalPieceWeights,referencePieceWeights,calibrateReferenceShare}; }
+if(typeof module!=='undefined'&&module.exports){ module.exports={TYPES,VAL,genSetup,countKings,countPieces,kingsOf,pieceCounts,isAttacked,pseudoMoves,applyMoveToBoard,legalMoves,posKey,evaluate,newGame,acceptsOpening,doMove,botMove,serializeState,deserializeState,mulberry32,sqName,opp,finalPieceWeights,referencePieceWeights,calibrateReferenceShare}; }
 </script>
 <script>
 "use strict";
@@ -993,8 +1012,15 @@ function revealXabinski(m,previous,config){
 
 function startGame(m,seed,opts){
   opts=opts||{};
+  const next=newGame(m,seed,opts.board||null,opts.config);
+  if(!next){
+    const message='No suitable opening was found in '+OPENING_ATTEMPTS+' rolls. Try again or change the piece settings.';
+    if($('gameScreen').classList.contains('hidden')) setMenuMsg(message);
+    else $('connBox').textContent=message;
+    return false;
+  }
   playMode=opts.playMode||'local'; myColor=opts.myColor||null; isHost=!!opts.isHost; roomCode=opts.roomCode||null;
-  state=newGame(m,seed,opts.board||null,opts.config);
+  state=next;
   gameId++;
   lastAckedN=-1; clearTimeout(resendTimer); stateReceived=(playMode!=='online'||isHost);
   startHeartbeat();
@@ -1006,6 +1032,7 @@ function startGame(m,seed,opts){
   $('connBox').innerHTML=opts.connText||(playMode==='online'?'Online game':'Local game');
   render();
   if(state.over) beep(220,0.3);
+  return true;
 }
 function backToMenu(){
   closeXabinski();
@@ -1045,9 +1072,10 @@ function requestRematch(){
   const seed=randomSeed();
   const config=state?.config;
   if(playMode==='online'&&conn&&conn.open){
-    if(isHost){ const nc=myColor==='w'?'b':'w'; myColor=nc;
-      send({t:'rematch',mode:m,seed,config,guestColor:opp(nc)});
-      startGame(m,seed,{config,playMode:'online',myColor:nc,isHost:true,roomCode,connText:'Online game — rematch! Colours swapped.'});
+    if(isHost){ const nc=myColor==='w'?'b':'w';
+      if(startGame(m,seed,{config,playMode:'online',myColor:nc,isHost:true,roomCode,connText:'Online game — rematch! Colours swapped.'})){
+        send({t:'rematch',mode:m,seed:state.seed,board:state.board,config,guestColor:opp(nc)});
+      }
     } else { send({t:'rematch-request',mode:m}); setMenuMsg('Rematch requested — waiting for host…'); }
     return;
   }
@@ -1160,7 +1188,7 @@ function handleMsg(msg,asHost){
   } else if(msg.t==='resign'){
     state.over=true; state.winner=opp(msg.by); state.reason=(msg.by==='w'?'White':'Black')+' resigned.'; render();
   } else if(msg.t==='rematch'){
-    startGame(msg.mode,msg.seed,{config:msg.config,playMode:'online',myColor:msg.guestColor,isHost:false,roomCode,connText:'Online game — rematch! Colours swapped.'});
+    startGame(msg.mode,msg.seed,{board:msg.board,config:msg.config,playMode:'online',myColor:msg.guestColor,isHost:false,roomCode,connText:'Online game — rematch! Colours swapped.'});
   } else if(msg.t==='rematch-request'&&asHost){
     requestRematch();
   }
@@ -1173,8 +1201,10 @@ $('btnCreate').onclick=()=>{
   try{ if(peer) peer.destroy(); }catch(e){}
   peer=new Peer(peerIdFor(code));
   peer.on('open',()=>{
+    if(!startGame(chosenMode,randomSeed(),{config,playMode:'online',myColor:'w',isHost:true,roomCode:code,connText:'Room <b>'+code+'</b> — waiting for your friend to join…<br>Send them the code, or the copy button below.'})){
+      peer.destroy(); peer=null; roomCode=null; return;
+    }
     setMenuMsg('Room '+code+' is live — send the code to your friend.');
-    startGame(chosenMode,randomSeed(),{config,playMode:'online',myColor:'w',isHost:true,roomCode:code,connText:'Room <b>'+code+'</b> — waiting for your friend to join…<br>Send them the code, or the copy button below.'});
     waitingForGuest=true;
   });
   peer.on('connection',c=>{ waitingForGuest=false; attachConn(c,true); });
@@ -1205,7 +1235,7 @@ $('btnAnyone').onclick=async()=>{
   setMenuMsg('Looking for an opponent…');
   for(let slot=1;slot<=5;slot++){
     const res=await tryLobbySlot(slot,chosenMode,config);
-    if(res==='wait'||res==='joined') return;
+    if(res==='wait'||res==='joined'||res==='no-opening') return;
   }
   setMenuMsg('All lobby slots are busy right now — try again in a few seconds, or create a room instead.');
 };
@@ -1218,8 +1248,10 @@ function tryLobbySlot(slot,chosenMode,config){
     try{ p=new Peer(id); }catch(e){ return finish('next'); }
     const timer=setTimeout(()=>{ try{p.destroy();}catch(e){} finish('next'); },4000);
     p.on('open',()=>{
-      clearTimeout(timer); peer=p; isHost=true; roomCode=null;
-      startGame(chosenMode,randomSeed(),{config,playMode:'online',myColor:'w',isHost:true,roomCode:null,connText:'In the lobby (slot '+slot+') — waiting for an opponent to join…'});
+      clearTimeout(timer); peer=p; roomCode=null;
+      if(!startGame(chosenMode,randomSeed(),{config,playMode:'online',myColor:'w',isHost:true,roomCode:null,connText:'In the lobby (slot '+slot+') — waiting for an opponent to join…'})){
+        p.destroy(); peer=null; finish('no-opening'); return;
+      }
       setMenuMsg('Waiting for an opponent… (lobby slot '+slot+')');
       p.on('connection',c=>{ attachConn(c,true); setMenuMsg('Opponent found — good luck!'); });
       finish('wait');
