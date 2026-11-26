@@ -28,6 +28,10 @@ p{color:var(--mut);font-size:14px;line-height:1.5}
 .mode b{font-size:16px;display:block;margin-bottom:4px}
 .mode .dice{font-size:22px}
 .mode p{font-size:13px}
+.setup-options{margin:14px 0}
+.setup-options summary{cursor:pointer}
+.piece-settings{display:grid;grid-template-columns:minmax(2.5rem,1fr) minmax(5rem,1.5fr) repeat(2,minmax(2rem,1fr)) minmax(3rem,1fr);gap:6px;align-items:center;margin:10px 0;font-size:13px}
+.piece-settings select,.piece-settings input{width:100%;min-width:0;padding:5px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
 input[type=text]{background:#0c0e12;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px 12px;font-size:16px;min-width:0}
 input[type=text]:focus{outline:2px solid var(--gold);outline-offset:1px}
@@ -79,6 +83,15 @@ select{background:#0c0e12;border:1px solid var(--line);color:var(--txt);border-r
 .conn b{color:var(--txt)}
 .roomcode{font-size:24px;font-weight:900;letter-spacing:.25em;color:var(--gold)}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.xabinski{z-index:60;background:#101016;overflow:auto}
+.xabinski-card{width:min(100%,440px);max-height:100%;overflow:auto;text-align:center;padding:14px}
+.xabinski h2{color:var(--gold);font-size:clamp(2.4rem,10vw,4.25rem);margin:0 0 8px}
+.xabinski img{display:block;width:auto;max-width:100%;max-height:38vh;margin:0 auto 12px;border-radius:12px;object-fit:contain}
+.xabinski table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.xabinski th,.xabinski td{padding:3px 6px;text-align:right}
+.xabinski th:first-child{text-align:left}
+.xabinski del{text-decoration-color:#ff4f59;text-decoration-thickness:3px}
+.xabinski-quote{color:var(--gold);font-weight:700;margin:12px 0 0}
 .modal .box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;max-width:420px;width:100%;text-align:center}
 .modal .box h2{font-size:22px}
 .promo-pieces{display:flex;gap:10px;justify-content:center;margin:16px 0 4px}
@@ -109,6 +122,22 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
         <p>Piece count is random. Piece types are random. Squares are random. No limits. If you start with no king, you lose on the spot.</p>
       </button>
     </div>
+    <details class="setup-options">
+      <summary>Advanced settings</summary>
+      <label><input id="customSetup" type="checkbox"> Customize piece counts</label>
+      <div id="customFields" hidden>
+        <div class="row">
+          <label>Central piece <select id="axisCenter"></select></label>
+          <label>Axis distribution <select id="axisDistribution"></select></label>
+          <label id="axisScaleLabel"><span id="axisParameterName">Axis standard deviation</span> <input id="axisScale" type="number" min="0.1" max="64" step="any" value="1.5"></label>
+          <button id="shuffleAxis" type="button" class="ghost">Shuffle axis</button>
+        </div>
+        <p id="axisOrder"></p>
+        <p>Reference means describe each individual draw. Final weights are expected shares after combining the axis, available slots and starting pawn promotions, before opening re-rolls. A tiny probability floor allows a full board composition even when the individual ranges conflict.</p>
+        <div class="piece-settings" id="pieceSettings"></div>
+        <p id="setupError" role="status"></p>
+      </div>
+    </details>
     <div class="row">
       <label for="nameInput" style="color:var(--mut);font-size:14px">Your name</label>
       <input type="text" id="nameInput" placeholder="e.g. Henrique" maxlength="20" style="flex:1;min-width:140px">
@@ -132,7 +161,7 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
     <h2>How RNG Chess works</h2>
     <ul>
       <li><b>Win by killing kings.</b> If a side has several kings, <b>all</b> of them must be captured. Capturing one just thins the herd.</li>
-      <li><b>No king at the start = instant loss.</b> When the board is rolled, each side with pieces has a 5% chance of rolling zero kings. One king is the most common result.</li>
+      <li><b>No king at the start = instant loss.</b> With default settings, each side with pieces has a 5% chance of rolling zero kings. One king is the most common result.</li>
       <li><b>Every game starts playable.</b> If a roll would open with White having no move at all, the dice re-roll until White has a legal move.</li>
       <li><b>Normal chess moves otherwise.</b> Pawns, knights, bishops, rooks, queens and kings all move the usual way. Pawns promote on the last rank (you pick). En passant works. There is <b>no castling</b> — with random pieces it would be chaos.</li>
       <li><b>Kings are captured like any other piece.</b> If your king is attacked and you don't save it, it dies — you lose only when your last king falls. There is no checkmate.</li>
@@ -193,6 +222,20 @@ Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no ga
   </div>
 </div></div>
 
+<div id="xabinskiReveal" class="modal xabinski hidden" role="dialog" aria-modal="true" aria-labelledby="xabinskiTitle">
+  <div class="xabinski-card">
+    <h2 id="xabinskiTitle" tabindex="-1" lang="pt-BR">Xabinski!</h2>
+    <img src="Xabinski!.jpeg" alt="">
+    <div id="xabinskiResults" class="hidden" aria-live="polite">
+      <table>
+        <thead><tr><th scope="col">Piece</th><th scope="col">Previous</th><th scope="col">New</th></tr></thead>
+        <tbody id="xabinskiWeights"></tbody>
+      </table>
+      <p class="xabinski-quote" lang="pt-BR">Você não pode prever o aleatório</p>
+    </div>
+  </div>
+</div>
+
 <script>
 "use strict";
 /* =====================================================================
@@ -232,23 +275,126 @@ function placePieces(board,color,squares,rng){
     board[squares[i]]={t:type,c:color};
   }
 }
-function genSetup(mode, seed){
+function setupAxis(center,rng){
+  const others=shuffle(TYPES.filter(type=>type!==center),rng);
+  return [...others.slice(0,2),center,...others.slice(2)];
+}
+
+// A tiny probability floor keeps a full composition possible when supports conflict.
+const MIN_SETUP_WEIGHT=1e-12;
+function countWeights(distribution,mean,spread,max,axis=false){
+  const weights=[];
+  let poisson=Math.exp(-mean);
+  const rayleighTail=x=>Math.exp(-Math.PI*(x/mean)**2/4);
+  for(let k=0;k<=max;k++){
+    const lower=Math.max(0,k-0.5), upper=k+0.5;
+    let weight;
+    if(distribution==='gaussian'){
+      weight=Math.exp(-0.5*((k-mean)/spread)**2);
+    } else if(distribution==='poisson'){
+      if(k>0) poisson*=mean/k;
+      weight=poisson;
+    } else if(distribution==='rayleigh'){
+      weight=mean===0 ? Number(k===0) : rayleighTail(lower)-rayleighTail(upper);
+    } else {
+      weight=axis ? 1 : mean===0 ? Number(k===0) : Math.max(0,Math.min(upper,2*mean)-lower)/(2*mean);
+    }
+    weights.push(Math.max(MIN_SETUP_WEIGHT,weight));
+  }
+  return weights;
+}
+
+function buildComposition(config,max){
+  const axis=config.axis;
+  const scale=config.scale;
+  const axisWeights=countWeights(config.distribution,config.distribution==='gaussian'?0:scale,scale,3,true);
+  const weights=TYPES.map(type=>{
+    const {distribution,mean,spread}=config.pieces[type];
+    const relative=axisWeights[Math.abs(axis.indexOf(type)-2)];
+    return countWeights(distribution,mean,spread,max).map((weight,k)=>Math.log(weight)+k*Math.log(relative));
+  });
+  const suffix=Array.from({length:TYPES.length+1},()=>Array(max+1).fill(-Infinity));
+  suffix[TYPES.length][0]=0;
+  for(let i=TYPES.length-1;i>=0;i--){
+    for(let n=0;n<=max;n++){
+      const scores=weights[i].slice(0,n+1).map((weight,k)=>weight+suffix[i+1][n-k]);
+      const peak=Math.max(...scores);
+      suffix[i][n]=peak+Math.log(scores.reduce((sum,score)=>sum+Math.exp(score-peak),0));
+    }
+  }
+  return {weights,suffix};
+}
+
+function countProbability(model,i,n,k){
+  return Math.exp(model.weights[i][k]+model.suffix[i+1][n-k]-model.suffix[i][n]);
+}
+
+function customTypes(model,total,rng){
+  const pieces=[];
+  let remaining=total;
+  TYPES.forEach((type,i)=>{
+    let draw=rng(), count=0;
+    for(;count<remaining;count++){
+      draw-=countProbability(model,i,remaining,count);
+      if(draw<0) break;
+    }
+    for(let j=0;j<count;j++) pieces.push(type);
+    remaining-=count;
+  });
+  return shuffle(pieces,rng);
+}
+
+function finalPieceWeights(mode,config){
+  const max=mode==='pieces'?16:64;
+  const model=buildComposition(config,max);
+  let totals=Array(max+1).fill(0);
+  if(mode==='pieces') totals[16]=1;
+  else for(let total=0;total<=64;total++) for(let n=0;n<=total;n++) totals[n]+=1/(65*(total+1));
+  const expected=TYPES.map((_,i)=>{
+    const next=Array(max+1).fill(0);
+    let mean=0;
+    for(let n=0;n<=max;n++){
+      if(totals[n]===0) continue;
+      for(let k=0;k<=n;k++){
+        const mass=totals[n]*countProbability(model,i,n,k);
+        next[n-k]+=mass;
+        mean+=mass*k;
+      }
+    }
+    totals=next;
+    return mean/16;
+  });
+  if(mode==='everything'){
+    const promoted=expected[TYPES.indexOf('P')]/8;
+    expected[TYPES.indexOf('P')]-=promoted;
+    expected[TYPES.indexOf('Q')]+=promoted;
+  }
+  return expected;
+}
+
+function genSetup(mode, seed, config){
   const rng = mulberry32(seed>>>0);
   const board = new Array(64).fill(null);
+  const model=config && buildComposition(config,mode==='pieces'?16:64);
+  function place(color,squares){
+    if(!model){ placePieces(board,color,squares,rng); return; }
+    const types=customTypes(model,squares.length,rng);
+    squares.forEach((square,i)=>{ board[square]={t:types[i],c:color}; });
+  }
   if (mode==='pieces'){
     // Standard 16 slots per side (ranks 1-2 white, 7-8 black).
     const whiteSlots=[], blackSlots=[];
     for(let i=48;i<64;i++) whiteSlots.push(i);
     for(let i=0;i<16;i++) blackSlots.push(i);
-    placePieces(board,'w',whiteSlots,rng);
-    placePieces(board,'b',blackSlots,rng);
+    place('w',whiteSlots);
+    place('b',blackSlots);
   } else {
     // RANDOM EVERYTHING: random total (0-64), random split, random squares, random types.
     const total = Math.floor(rng()*65);
     const wCount = Math.floor(rng()*(total+1));
     const squares = shuffle(Array.from({length:64},(_,i)=>i), rng);
-    placePieces(board,'w',squares.slice(0,wCount),rng);
-    placePieces(board,'b',squares.slice(wCount,total),rng);
+    place('w',squares.slice(0,wCount));
+    place('b',squares.slice(wCount,total));
     // A pawn spawned on the last rank auto-promotes to queen (no illegal position).
     for(let i=0;i<64;i++){ const p=board[i]; if(!p||p.t!=='P') continue; const r=(i/8)|0;
       if((p.c==='w'&&r===0)||(p.c==='b'&&r===7)) p.t='Q'; }
@@ -342,9 +488,9 @@ function evaluate(st){
   if((st.posCounts[posKey(st.board,st.turn,st.ep)]||0)>=3) return {over:true,winner:null,reason:'Same position three times — draw.'};
   return {over:false,winner:null,reason:''};
 }
-function newGame(mode,seed,boardOverride){
+function newGame(mode,seed,boardOverride,config){
   if(boardOverride){
-    const st={mode,seed,board:boardOverride,turn:'w',ep:-1,halfmove:0,fullmove:1,over:false,winner:null,reason:'',history:[],posCounts:{}};
+    const st={mode,seed,board:boardOverride,turn:'w',ep:-1,halfmove:0,fullmove:1,over:false,winner:null,reason:'',history:[],posCounts:{},config};
     st.posCounts[posKey(st.board,'w',-1)]=1;
     const ev=evaluate(st); st.over=ev.over; st.winner=ev.winner; st.reason=ev.reason;
     return st;
@@ -356,8 +502,8 @@ function newGame(mode,seed,boardOverride){
   // a game — so the re-roll only guards against a no-moves start.)
   let s=seed>>>0, st=null;
   for(let attempt=0; attempt<100; attempt++){
-    const setup=genSetup(mode,s);
-    st={mode,seed:s,board:setup.board,turn:'w',ep:-1,halfmove:0,fullmove:1,over:false,winner:null,reason:'',history:[],posCounts:{}};
+    const setup=genSetup(mode,s,config);
+    st={mode,seed:s,board:setup.board,turn:'w',ep:-1,halfmove:0,fullmove:1,over:false,winner:null,reason:'',history:[],posCounts:{},config};
     st.posCounts[posKey(st.board,'w',-1)]=1;
     const ev=evaluate(st); st.over=ev.over; st.winner=ev.winner; st.reason=ev.reason;
     const wk=countKings(st.board,'w'), bk=countKings(st.board,'b');
@@ -397,9 +543,9 @@ function botMove(st,difficulty){
   }
   return best;
 }
-function serializeState(st){ return {mode:st.mode,seed:st.seed,board:st.board,turn:st.turn,ep:st.ep,halfmove:st.halfmove,fullmove:st.fullmove,history:st.history,posCounts:st.posCounts,over:st.over,winner:st.winner,reason:st.reason}; }
+function serializeState(st){ return {mode:st.mode,seed:st.seed,board:st.board,turn:st.turn,ep:st.ep,halfmove:st.halfmove,fullmove:st.fullmove,history:st.history,posCounts:st.posCounts,over:st.over,winner:st.winner,reason:st.reason,...(st.config?{config:st.config}:{})}; }
 function deserializeState(s){ const st=Object.assign({},s); st.board=s.board.map(p=>p?{t:p.t,c:p.c}:null); return st; }
-if(typeof module!=='undefined'&&module.exports){ module.exports={TYPES,VAL,genSetup,countKings,countPieces,kingsOf,pieceCounts,isAttacked,pseudoMoves,applyMoveToBoard,legalMoves,posKey,evaluate,newGame,doMove,botMove,serializeState,deserializeState,mulberry32,sqName,opp}; }
+if(typeof module!=='undefined'&&module.exports){ module.exports={TYPES,VAL,genSetup,countKings,countPieces,kingsOf,pieceCounts,isAttacked,pseudoMoves,applyMoveToBoard,legalMoves,posKey,evaluate,newGame,doMove,botMove,serializeState,deserializeState,mulberry32,sqName,opp,finalPieceWeights}; }
 </script>
 <script>
 "use strict";
@@ -425,9 +571,58 @@ function show(id,on){ $(id).classList.toggle('hidden',!on); }
 function setMenuMsg(t){ $('menuMsg').textContent=t||''; }
 
 /* ---- mode picker ---- */
-function pickMode(m){ mode=m; $('modePieces').classList.toggle('sel',m==='pieces'); $('modeEverything').classList.toggle('sel',m==='everything'); }
+function pickMode(m){ mode=m; $('modePieces').classList.toggle('sel',m==='pieces'); $('modeEverything').classList.toggle('sel',m==='everything'); updateSetupPreview(); }
 $('modePieces').onclick=()=>pickMode('pieces');
 $('modeEverything').onclick=()=>pickMode('everything');
+
+const PIECE_NAMES={K:'King',Q:'Queen',R:'Rook',B:'Bishop',N:'Knight',P:'Pawn'};
+const DISTRIBUTION_OPTIONS='<option value="gaussian">Gaussian</option><option value="poisson">Poisson</option><option value="rayleigh">Rayleigh</option><option value="uniform">Uniform</option>';
+let axisSeed=randomSeed();
+$('axisCenter').innerHTML=TYPES.map(type=>'<option value="'+type+'">'+PIECE_NAMES[type]+'</option>').join('');
+$('axisDistribution').innerHTML=DISTRIBUTION_OPTIONS;
+$('pieceSettings').innerHTML='<b>Piece</b><b>Distribution</b><b>Ref. mean</b><b>Std. dev.</b><b>Final weight</b>'+
+  TYPES.map(type=>{
+    const name=PIECE_NAMES[type];
+    const mean={K:1,Q:2,R:2,B:2,N:3,P:6}[type];
+    return '<span>'+name+'</span><select id="dist'+type+'" aria-label="'+name+' distribution">'+DISTRIBUTION_OPTIONS+'</select>'+
+      '<input id="mean'+type+'" aria-label="'+name+' reference mean" type="number" min="0" max="64" step="any" value="'+mean+'">'+
+      '<input id="spread'+type+'" aria-label="'+name+' standard deviation" type="number" min="0.1" max="64" step="any" value="1.5">'+
+      '<output id="weight'+type+'"></output>';
+  }).join('');
+
+function readSetupConfig(){
+  const center=$('axisCenter').value;
+  const distribution=$('axisDistribution').value;
+  const scale=distribution==='uniform'?1:$('axisScale').valueAsNumber;
+  if(!(scale>=0.1&&scale<=64)) return null;
+  const pieces={};
+  for(const type of TYPES){
+    const distribution=$('dist'+type).value;
+    const mean=$('mean'+type).valueAsNumber;
+    const spread=distribution==='gaussian'?$('spread'+type).valueAsNumber:1;
+    if(!(mean>=0&&mean<=64&&spread>=0.1&&spread<=64)) return null;
+    pieces[type]={distribution,mean,spread};
+  }
+  return {center,distribution,scale,axis:setupAxis(center,mulberry32(axisSeed)),pieces};
+}
+
+function updateSetupPreview(){
+  $('customFields').hidden=!$('customSetup').checked;
+  if(!$('customSetup').checked) return;
+  const distribution=$('axisDistribution').value;
+  $('axisScaleLabel').hidden=distribution==='uniform';
+  $('axisParameterName').textContent=distribution==='gaussian'?'Axis standard deviation':'Axis reference mean';
+  for(const type of TYPES) $('spread'+type).disabled=$('dist'+type).value!=='gaussian';
+  const config=readSetupConfig();
+  $('setupError').textContent=config?'':'Use means from 0 to 64 and standard deviations or axis parameters from 0.1 to 64.';
+  $('axisOrder').textContent=config?config.axis.map(type=>PIECE_NAMES[type]).join(' · '):'';
+  const weights=config&&finalPieceWeights(mode,config);
+  TYPES.forEach((type,i)=>{ $('weight'+type).textContent=weights?(100*weights[i]).toFixed(2)+'%':'—'; });
+}
+$('customSetup').onchange=updateSetupPreview;
+$('customFields').oninput=updateSetupPreview;
+$('customFields').onchange=updateSetupPreview;
+$('shuffleAxis').onclick=()=>{ axisSeed=randomSeed(); updateSetupPreview(); };
 $('botLevel').onchange=e=>botLevel=e.target.value;
 
 /* ---- board rendering ---- */
@@ -525,10 +720,47 @@ function finishMove(from,to,promotion){
 }
 
 /* ---- starting games ---- */
+const XABINSKI_STAGE_MS=3500;
+let xabinskiTimer;
+
+function rerollAxis(config){
+  const axis=setupAxis(config.center,mulberry32(randomSeed()));
+  const previousAxis=config.axis;
+  if(axis.every((type,i)=>Math.abs(i-2)===Math.abs(previousAxis.indexOf(type)-2))){
+    [axis[0],axis[5]]=[axis[5],axis[0]];
+  }
+  return {...config,axis,previousAxis};
+}
+
+function closeXabinski(){
+  clearTimeout(xabinskiTimer);
+  show('xabinskiReveal',false);
+  for(const id of ['gameScreen','overModal','promoModal']) $(id).inert=false;
+}
+
+function revealXabinski(m,config){
+  closeXabinski();
+  if(!config?.previousAxis) return;
+  show('xabinskiResults',false);
+  show('xabinskiReveal',true);
+  for(const id of ['gameScreen','overModal','promoModal']) $(id).inert=true;
+  $('xabinskiTitle').focus?.();
+  xabinskiTimer=setTimeout(()=>{
+    const before=finalPieceWeights(m,{...config,axis:config.previousAxis});
+    const after=finalPieceWeights(m,config);
+    const percent=value=>(value*100).toFixed(2)+'%';
+    $('xabinskiWeights').innerHTML=TYPES.map((type,i)=>
+      '<tr><th scope="row">'+PIECE_NAMES[type]+'</th><td><del>'+percent(before[i])+'</del></td><td>'+percent(after[i])+'</td></tr>'
+    ).join('');
+    show('xabinskiResults',true);
+    xabinskiTimer=setTimeout(closeXabinski,XABINSKI_STAGE_MS);
+  },XABINSKI_STAGE_MS);
+}
+
 function startGame(m,seed,opts){
   opts=opts||{};
   playMode=opts.playMode||'local'; myColor=opts.myColor||null; isHost=!!opts.isHost; roomCode=opts.roomCode||null;
-  state=newGame(m,seed,opts.board||null);
+  state=newGame(m,seed,opts.board||null,opts.config);
   gameId++;
   lastAckedN=-1; clearTimeout(resendTimer); stateReceived=(playMode!=='online'||isHost);
   startHeartbeat();
@@ -539,14 +771,18 @@ function startGame(m,seed,opts){
   if(roomCode) $('roomCodeText').textContent=roomCode;
   $('connBox').innerHTML=opts.connText||(playMode==='online'?'Online game':'Local game');
   render();
+  revealXabinski(m,opts.config);
   if(state.over) beep(220,0.3);
 }
 function backToMenu(){
+  closeXabinski();
   try{ if(conn) conn.close(); }catch(e){}
   try{ if(peer) peer.destroy(); }catch(e){}
   peer=null; conn=null; roomCode=null; waitingForGuest=false;
   stopHeartbeat(); stopHelloLoop(); clearTimeout(resendTimer);
   setMenuMsg('');
+  axisSeed=randomSeed();
+  updateSetupPreview();
   hideOver(); show('gameScreen',false); show('menuScreen',true);
 }
 $('btnMenu').onclick=backToMenu;
@@ -559,8 +795,20 @@ $('btnCopy').onclick=async()=>{
   try{ await navigator.clipboard.writeText(txt); $('btnCopy').textContent='Copied!'; setTimeout(()=>$('btnCopy').textContent='Copy code / link',1500); }
   catch(e){ prompt('Copy your room link:',txt); }
 };
-$('btnLocal').onclick=()=>startGame(mode,randomSeed(),{playMode:'local',connText:'Local 2-player — same screen, pass &amp; play.'});
-$('btnBot').onclick=()=>startGame(mode,randomSeed(),{playMode:'bot',myColor:'w',connText:'You (White) vs Bot ('+botLevel+'). Bot plays Black.'});
+function setupFromMenu(){
+  if(!$('customSetup').checked) return undefined;
+  const config=readSetupConfig();
+  if(!config) setMenuMsg('Check the numerical fields in Advanced settings.');
+  return config && rerollAxis(config);
+}
+$('btnLocal').onclick=()=>{
+  const config=setupFromMenu();
+  if(config!==null) startGame(mode,randomSeed(),{config,playMode:'local',connText:'Local 2-player — same screen, pass &amp; play.'});
+};
+$('btnBot').onclick=()=>{
+  const config=setupFromMenu();
+  if(config!==null) startGame(mode,randomSeed(),{config,playMode:'bot',myColor:'w',connText:'You (White) vs Bot ('+botLevel+'). Bot plays Black.'});
+};
 $('btnRematch').onclick=()=>requestRematch();
 $('btnOverRematch').onclick=()=>{ hideOver(); requestRematch(); };
 $('btnResign').onclick=()=>{
@@ -571,15 +819,18 @@ $('btnResign').onclick=()=>{
 };
 function requestRematch(){
   const m=state?state.mode:mode;
+  const seed=randomSeed();
+  const previous=state&&state.config;
+  const config=previous?rerollAxis(previous):undefined;
   if(playMode==='online'&&conn&&conn.open){
-    if(isHost){ const seed=randomSeed(); const nc=myColor==='w'?'b':'w'; myColor=nc;
-      send({t:'rematch',mode:m,seed,guestColor:opp(nc)});
-      startGame(m,seed,{playMode:'online',myColor:nc,isHost:true,roomCode,connText:'Online game — rematch! Colours swapped.'});
+    if(isHost){ const nc=myColor==='w'?'b':'w'; myColor=nc;
+      send({t:'rematch',mode:m,seed,config,guestColor:opp(nc)});
+      startGame(m,seed,{config,playMode:'online',myColor:nc,isHost:true,roomCode,connText:'Online game — rematch! Colours swapped.'});
     } else { send({t:'rematch-request',mode:m}); setMenuMsg('Rematch requested — waiting for host…'); }
     return;
   }
   const swap=playMode==='bot'||playMode==='online';
-  startGame(m,randomSeed(),{playMode,myColor:playMode==='bot'?'w':null,connText:playMode==='bot'?'You (White) vs Bot.':'Local 2-player — new roll!'});
+  startGame(m,seed,{config,playMode,myColor:playMode==='bot'?'w':null,connText:playMode==='bot'?'You (White) vs Bot.':'Local 2-player — new roll!'});
 }
 
 /* ---- multiplayer (PeerJS) ---- */
@@ -624,7 +875,7 @@ function adoptState(s){
   return true;
 }
 function startFromState(s){
-  startGame(s.mode,s.seed,{playMode:'online',myColor:'b',isHost:false,roomCode,connText:'Online game — you are <b>Black</b>. White moves first.'});
+  startGame(s.mode,s.seed,{board:s.board,config:s.history.length?undefined:s.config,playMode:'online',myColor:'b',isHost:false,roomCode,connText:'Online game — you are <b>Black</b>. White moves first.'});
   state=deserializeState(s);
   stateReceived=true; send({t:'ack',n:state.history.length}); render();
 }
@@ -687,12 +938,14 @@ function handleMsg(msg,asHost){
   } else if(msg.t==='resign'){
     state.over=true; state.winner=opp(msg.by); state.reason=(msg.by==='w'?'White':'Black')+' resigned.'; render();
   } else if(msg.t==='rematch'){
-    startGame(msg.mode,msg.seed,{playMode:'online',myColor:msg.guestColor,isHost:false,roomCode,connText:'Online game — rematch! Colours swapped.'});
+    startGame(msg.mode,msg.seed,{config:msg.config,playMode:'online',myColor:msg.guestColor,isHost:false,roomCode,connText:'Online game — rematch! Colours swapped.'});
   } else if(msg.t==='rematch-request'&&asHost){
     requestRematch();
   }
 }
 $('btnCreate').onclick=()=>{
+  const config=setupFromMenu(), chosenMode=mode;
+  if(config===null) return;
   if(typeof Peer==='undefined'){ setMenuMsg('Could not load the multiplayer library (PeerJS). Check your connection and try again — bot and local play still work.'); return; }
   const code=makeCode(); roomCode=code;
   setMenuMsg('Creating room '+code+'…');
@@ -700,7 +953,7 @@ $('btnCreate').onclick=()=>{
   peer=new Peer(peerIdFor(code));
   peer.on('open',()=>{
     setMenuMsg('Room '+code+' is live — send the code to your friend.');
-    startGame(mode,randomSeed(),{playMode:'online',myColor:'w',isHost:true,roomCode:code,connText:'Room <b>'+code+'</b> — waiting for your friend to join…<br>Send them the code, or the copy button below.'});
+    startGame(chosenMode,randomSeed(),{config,playMode:'online',myColor:'w',isHost:true,roomCode:code,connText:'Room <b>'+code+'</b> — waiting for your friend to join…<br>Send them the code, or the copy button below.'});
     waitingForGuest=true;
   });
   peer.on('connection',c=>{ waitingForGuest=false; attachConn(c,true); });
@@ -726,15 +979,17 @@ function joinRoom(code){
 }
 /* Play Anyone: claim a lobby slot, or join the stranger waiting in one. */
 $('btnAnyone').onclick=async()=>{
+  const config=setupFromMenu(), chosenMode=mode;
+  if(config===null) return;
   if(typeof Peer==='undefined'){ setMenuMsg('Could not load the multiplayer library (PeerJS). Check your connection and try again.'); return; }
   setMenuMsg('Looking for an opponent…');
   for(let slot=1;slot<=5;slot++){
-    const res=await tryLobbySlot(slot);
+    const res=await tryLobbySlot(slot,chosenMode,config);
     if(res==='wait'||res==='joined') return;
   }
   setMenuMsg('All lobby slots are busy right now — try again in a few seconds, or create a room instead.');
 };
-function tryLobbySlot(slot){
+function tryLobbySlot(slot,chosenMode,config){
   return new Promise(resolve=>{
     const id='rngchess-lobby-v1-'+slot;
     let done=false;
@@ -744,7 +999,7 @@ function tryLobbySlot(slot){
     const timer=setTimeout(()=>{ try{p.destroy();}catch(e){} finish('next'); },4000);
     p.on('open',()=>{
       clearTimeout(timer); peer=p; isHost=true; roomCode=null;
-      startGame(mode,randomSeed(),{playMode:'online',myColor:'w',isHost:true,roomCode:null,connText:'In the lobby (slot '+slot+') — waiting for an opponent to join…'});
+      startGame(chosenMode,randomSeed(),{config,playMode:'online',myColor:'w',isHost:true,roomCode:null,connText:'In the lobby (slot '+slot+') — waiting for an opponent to join…'});
       setMenuMsg('Waiting for an opponent… (lobby slot '+slot+')');
       p.on('connection',c=>{ attachConn(c,true); setMenuMsg('Opponent found — good luck!'); });
       finish('wait');

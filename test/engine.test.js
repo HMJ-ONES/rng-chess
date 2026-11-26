@@ -100,6 +100,33 @@ for (const mode of ['pieces', 'everything']) {
   }
 }
 
+console.log('Advanced piece distributions:');
+{
+  const axis = ['Q', 'R', 'K', 'B', 'N', 'P'];
+  const pieces = Object.fromEntries(E.TYPES.map(type => [type, {distribution:'poisson', mean:1, spread:1}]));
+  const config = {center:'K', axis, distribution:'uniform', scale:1, pieces};
+  const weights = E.finalPieceWeights('pieces', config);
+  check('equal Poisson rates with a uniform axis give equal final shares',
+    weights.every(weight => Math.abs(weight - 1/6) < 1e-6));
+  const everything = E.finalPieceWeights('everything', config);
+  check('final shares include promotion of one eighth of starting pawns in Everything',
+    Math.abs(everything[E.TYPES.indexOf('P')] - 7/48) < 1e-6 &&
+    Math.abs(everything[E.TYPES.indexOf('Q')] - 9/48) < 1e-6);
+  const mixed = {...config, distribution:'gaussian', pieces:{
+    ...pieces, K:{distribution:'rayleigh', mean:1, spread:1},
+    Q:{distribution:'uniform', mean:2, spread:1}, R:{distribution:'gaussian', mean:2, spread:1},
+  }};
+  for (const mode of ['pieces', 'everything']) {
+    const first = E.genSetup(mode, 42, mixed);
+    const standard = E.genSetup(mode, 42);
+    check(mode + ': custom draw preserves the original occupied squares and colours',
+      first.board.every((piece, i) => (piece?.c ?? null) === (standard.board[i]?.c ?? null) && (!piece || E.TYPES.includes(piece.t))));
+    check(mode + ': custom draws are deterministic and serialize their configuration',
+      JSON.stringify(first) === JSON.stringify(E.genSetup(mode, 42, mixed)) &&
+      JSON.stringify(E.deserializeState(E.serializeState(E.newGame(mode, 42, null, mixed))).config) === JSON.stringify(mixed));
+  }
+}
+
 console.log('No game is born with no moves at all:');
 {
   let bad = 0;

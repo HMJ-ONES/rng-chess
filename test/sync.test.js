@@ -56,7 +56,7 @@ function check(name, cond, extra) {
   else { fail++; console.log('FAIL  ' + name + (extra ? ' — ' + extra : '')); }
 }
 
-async function runScenario(name, dropFn, movesToMake) {
+async function runScenario(name, dropFn, movesToMake, custom = false) {
   console.log('Scenario: ' + name);
   const host = makeCtx(), guest = makeCtx();
   const sent = { host: [], guest: [] };
@@ -81,7 +81,21 @@ async function runScenario(name, dropFn, movesToMake) {
   const hostConn = makeConn('host'), guestConn = makeConn('guest');
   const E = host.module.exports;
 
-  host.startGame('pieces', 1234, { playMode: 'online', myColor: 'w', isHost: true, roomCode: 'TEST', connText: 'test' });
+  let config;
+  if (custom) {
+    const field = id => host.document.getElementById(id);
+    field('customSetup').checked = true;
+    field('axisCenter').value = 'K';
+    field('axisDistribution').value = 'uniform';
+    for (const type of E.TYPES) {
+      field('dist' + type).value = 'poisson';
+      field('mean' + type).valueAsNumber = 2;
+    }
+    field('customSetup').onchange();
+    config = host.setupFromMenu();
+    check('advanced menu shows the calculated final weight', field('weightK').textContent === '16.67%');
+  }
+  host.startGame('pieces', 1234, { config, playMode: 'online', myColor: 'w', isHost: true, roomCode: 'TEST', connText: 'test' });
   host.attachConn(hostConn, true);
   guest.attachConn(guestConn, false);
   hostConn.open = true; hostConn.emit('open');
@@ -90,6 +104,17 @@ async function runScenario(name, dropFn, movesToMake) {
   // Guest must have the board (hello-retry heals a dropped setup).
   const guestGotBoard = sent.guest.some(m => m.t === 'ack') || sent.host.some(m => m.t === 'state');
   check('guest received the board', guestGotBoard);
+  if (custom) {
+    const game = ctx => ctx.document.getElementById('gameScreen');
+    const weights = host.document.getElementById('xabinskiWeights');
+    check('the Xabinski screen gates play on both peers before showing weights',
+      game(host).inert && game(guest).inert && !weights.innerHTML);
+    await sleep(3400);
+    check('the comparison shows crossed-out old weights next to the new weights',
+      game(host).inert && weights.innerHTML.includes('<del>16.67%</del></td><td>16.67%</td>'));
+    await sleep(3500);
+    check('play is available after the weight comparison', !game(host).inert && !game(guest).inert);
+  }
 
   // Play movesToMake plies, alternating host/guest, via the real UI entry point.
   for (let ply = 0; ply < movesToMake; ply++) {
@@ -113,6 +138,14 @@ async function runScenario(name, dropFn, movesToMake) {
   if (hp && gp) {
     check('board fingerprints match after ' + movesToMake + ' plies (host n=' + hp.n + ' hash=' + hp.hash + ', guest n=' + gp.n + ' hash=' + gp.hash + ')', hp.n === gp.n && hp.hash === gp.hash);
   }
+  if (custom) {
+    check('guest receives the custom setup and axis',
+      vm.runInContext('JSON.stringify(state.config)', guest) === JSON.stringify(config));
+    host.requestRematch();
+    await sleep(100);
+    const snapshot = ctx => vm.runInContext('JSON.stringify(serializeState(state))', ctx);
+    check('custom rematch regenerates the same board on both peers', snapshot(host) === snapshot(guest));
+  }
   // Cleanup timers so the process can exit.
   host.backToMenu(); guest.backToMenu();
   await sleep(50);
@@ -120,7 +153,7 @@ async function runScenario(name, dropFn, movesToMake) {
 }
 
 (async () => {
-  await runScenario('ideal: no drops, 4 plies', null, 4);
+  await runScenario('custom setup and rematch: no drops, 4 plies', null, 4, true);
   await runScenario('dropped setup: first host state lost, 2 plies', (from, m) => from === 'host' && m.t === 'state' && !runScenario._setupDropped ? (runScenario._setupDropped = true) : false, 2);
   runScenario._setupDropped = false;
   let droppedMove = false;
