@@ -32,8 +32,8 @@ check("Henrique's new engine is intact (Rayleigh / opening filter / distribution
   ['sampleRayleigh', 'KING_ZERO_CUTOFF', 'acceptsOpening', 'finalPieceWeights',
    'referencePieceWeights', 'calibrateReferenceShare', 'countWeights', 'setupAxis',
    'revealXabinski', 'Xabinski!.jpeg', 'OPENING_ATTEMPTS'].every(s => html.includes(s)));
-check("the Xabinski quote stays Portuguese (lang=pt-BR, as Henrique wrote it)",
-  html.includes('Você não pode prever o aleatório') && html.includes('lang="pt-BR"'));
+check("the Xabinski quote translates with the language (only the name stays)",
+  html.includes('<p class="xabinski-quote" data-i18n="xabQuote">') && !html.includes('<p class="xabinski-quote" lang="pt-BR">'));
 check('language switcher present with all 7 options',
   ['value="en"', 'value="pt"', 'value="es"', 'value="zh"', 'value="ja"', 'value="fr"', 'value="ko"'].every(s => html.includes(s))
   && html.includes('id="langSelect"'));
@@ -100,7 +100,7 @@ console.log('Dictionary parity (via the real UI script):');
   check('7 languages present (en pt es zh ja fr ko)',
     JSON.stringify([...langs].sort()) === JSON.stringify(['en', 'es', 'fr', 'ja', 'ko', 'pt', 'zh']));
   const enKeys = probe(ctx, 'Object.keys(I18N.en)');
-  check('139 keys in English (104 base + 35 advanced/Xabinski)', enKeys.length === 139, 'got ' + enKeys.length);
+  check('140 keys in English (104 base + 36 advanced/Xabinski)', enKeys.length === 140, 'got ' + enKeys.length);
   let missing = [];
   for (const l of langs) {
     const n = probe(ctx, 'Object.keys(I18N.' + l + ').length');
@@ -125,7 +125,7 @@ console.log('Dictionary parity (via the real UI script):');
      'advShuffleAxis', 'advRefSharesNote', 'advOk', 'advCancel', 'distGaussian', 'distPoisson',
      'distRayleigh', 'distUniform', 'distLabel', 'editBy', 'editParameters', 'editChance',
      'refMean', 'stdDev', 'refSharePct', 'setupRangeError', 'setupShareError',
-     'xabTitle', 'xabPiece', 'xabPrev', 'xabNew', 'xabExpected', 'msgNoOpening'].every(k => enKeys.includes(k)));
+     'xabTitle', 'xabPiece', 'xabPrev', 'xabNew', 'xabExpected', 'xabQuote', 'msgNoOpening'].every(k => enKeys.includes(k)));
   // "Xabinski" is never translated: the reveal title is the name verbatim in
   // every language, and no translation spells the name any other way.
   check('"Xabinski" is the reveal title verbatim in all 7 languages',
@@ -134,6 +134,10 @@ console.log('Dictionary parity (via the real UI script):');
   check('no translation spells the name any other way', misspelled.length === 0, misspelled.join(', '));
   check('the Xabinski expected-shares line translates in all 7 languages',
     langs.every(l => { probe(ctx, 'setLang("' + l + '")'); const v = probe(ctx, `t('xabExpected',{mode:'X'})`); return v && v !== 'xabExpected' && v.includes('X'); }));
+  check('the Xabinski quote translates in all 7 languages (name untouched)',
+    langs.every(l => { const v = probe(ctx, 'I18N.' + l + '.xabQuote'); return typeof v === 'string' && v.trim().length > 0 && v !== 'xabQuote' && !/xabinski/i.test(v); })
+    && probe(ctx, `I18N.en.xabQuote`) === 'You cannot predict the random'
+    && probe(ctx, `I18N.pt.xabQuote`) === 'Você não pode prever o aleatório');
   // the rules text is the NEW remote text (Rayleigh + opening filter), not
   // the old v1.2 reconstruction
   check('rule 2 is the new Rayleigh text (5% zero kings)', probe(ctx, `I18N.en.rule2`).includes('5% chance of rolling zero kings'));

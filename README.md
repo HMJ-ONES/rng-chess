@@ -67,7 +67,7 @@ Tests (engine only, no browser needed):
 node test/engine.test.js   # 58 checks: setups, Rayleigh king counts, distributions, opening filter, multi-king wins, pins, en passant, promotion, v1.2 draws, bot games
 node test/bot.test.js      # 533 bot games, 0 failures
 node test/sync.test.js     # 18 checks: two clients stay in sync over a lossy link, incl. custom setups
-node test/i18n.test.js     # 54 checks: 7 languages, switching, persistence, browser-language detection, Xabinski name pin
+node test/i18n.test.js     # 55 checks: 7 languages, switching, persistence, browser-language detection, Xabinski name pin, Xabinski quote translates
 ```
 
 ## Deploy to Cloudflare Pages ($0)
