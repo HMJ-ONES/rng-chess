@@ -136,7 +136,7 @@ console.log('Dictionary parity (via the real UI script):');
     langs.every(l => { probe(ctx, 'setLang("' + l + '")'); const v = probe(ctx, `t('xabExpected',{mode:'X'})`); return v && v !== 'xabExpected' && v.includes('X'); }));
   check('the Xabinski quote translates in all 7 languages (name untouched)',
     langs.every(l => { const v = probe(ctx, 'I18N.' + l + '.xabQuote'); return typeof v === 'string' && v.trim().length > 0 && v !== 'xabQuote' && !/xabinski/i.test(v); })
-    && probe(ctx, `I18N.en.xabQuote`) === 'You cannot predict the random'
+    && probe(ctx, `I18N.en.xabQuote`) === 'You cannot predict randomness'
     && probe(ctx, `I18N.pt.xabQuote`) === 'Você não pode prever o aleatório');
   // the rules text is the NEW remote text (Rayleigh + opening filter), not
   // the old v1.2 reconstruction
