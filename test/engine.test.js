@@ -108,6 +108,23 @@ console.log('Advanced piece distributions:');
   const weights = E.finalPieceWeights('pieces', config);
   check('equal Poisson rates with a uniform axis give equal final shares',
     weights.every(weight => Math.abs(weight - 1/6) < 1e-6));
+  for (const distribution of ['gaussian', 'poisson', 'rayleigh', 'uniform']) {
+    const sharesAt = spread => E.finalPieceWeights('pieces', {...config, version:2, pieces:{
+      ...pieces, K:{distribution, mean:3, spread},
+    }});
+    const low = sharesAt(0.5), high = sharesAt(3);
+    check(distribution + ': the piece standard deviation changes its final share',
+      Math.abs(low[0] - high[0]) > 0.005 && Math.abs(high.reduce((a,b) => a+b, 0) - 1) < 1e-8);
+    const probability = E.occurrenceProbability(distribution, 1, 1.5);
+    const calibrated = E.calibrateReferenceMean(distribution, 1.5, probability);
+    check(distribution + ': occurrence chance and reference mean round-trip',
+      calibrated !== null && Math.abs(calibrated - 1) < 1e-6);
+    check(distribution + ': unattainable probabilities are rejected',
+      E.calibrateReferenceMean(distribution, 1.5, 0) === null);
+  }
+  const centered = {...config, version:3, distribution:'gaussian'};
+  check('the axis changes final shares independently of the reference occurrence chances',
+    E.finalPieceWeights('pieces', centered)[0] > E.finalPieceWeights('pieces', {...centered, distribution:'uniform'})[0]);
   const everything = E.finalPieceWeights('everything', config);
   check('final shares include promotion of one eighth of starting pawns in Everything',
     Math.abs(everything[E.TYPES.indexOf('P')] - 7/48) < 1e-6 &&

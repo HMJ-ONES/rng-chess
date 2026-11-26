@@ -18,10 +18,18 @@ const uiSrc = blocks.find(s => s.includes('attachConn'));
 // caught here. UI crashes need a real-browser check; engine rules are fully
 // covered by test/engine.test.js instead.
 function makeEl() {
+  const classes = new Set();
   return {
     style: {}, dataset: {}, children: [], _l: {},
-    classList: { toggle() {}, add() {}, remove() {}, contains() { return false; } },
+    classList: {
+      toggle(name, on = !classes.has(name)) { if (on) classes.add(name); else classes.delete(name); },
+      add(name) { classes.add(name); },
+      remove(name) { classes.delete(name); },
+      contains(name) { return classes.has(name); },
+    },
     innerHTML: '', textContent: '', value: '', className: '',
+    get valueAsNumber() { return this.value === '' ? NaN : Number(this.value); },
+    set valueAsNumber(value) { this.value = String(value); },
     appendChild(c) { this.children.push(c); return c; },
     addEventListener(ev, fn) { this._l[ev] = fn; },
     click() { if (this._l.click) this._l.click(); },
@@ -84,16 +92,43 @@ async function runScenario(name, dropFn, movesToMake, custom = false) {
   let config;
   if (custom) {
     const field = id => host.document.getElementById(id);
+    field('openAdvanced').onclick();
+    check('advanced settings opens a separate screen', field('menuScreen').classList.contains('hidden'));
     field('customSetup').checked = true;
     field('axisCenter').value = 'K';
     field('axisDistribution').value = 'uniform';
     for (const type of E.TYPES) {
       field('dist' + type).value = 'poisson';
       field('mean' + type).valueAsNumber = 2;
+      field('spread' + type).valueAsNumber = Math.sqrt(2);
     }
     field('customSetup').onchange();
-    config = host.setupFromMenu();
-    check('advanced menu shows the calculated final weight', field('weightK').textContent === '16.67%');
+    const initialChance=Number(field('chanceK').value);
+    field('inputK').value='chance';
+    field('chanceK').value='80';
+    field('customFields').oninput();
+    check('setting occurrence chance recalibrates the reference mean and preserves deviation',
+      Number(field('meanK').value) < 2 && Number(field('meanK').value) > 0 &&
+      field('spreadK').valueAsNumber === Math.sqrt(2) && field('meanK').readOnly);
+    field('inputK').value='parameters';
+    field('meanK').valueAsNumber=2;
+    field('customFields').oninput();
+    check('setting parameters updates the displayed reference chance',
+      Number(field('chanceK').value) === initialChance && initialChance > 80 && field('chanceK').readOnly);
+    const stages = [];
+    host.setTimeout = (run, delay) => stages.push({run, delay});
+    field('advancedForm').onsubmit({preventDefault() {}});
+    check('OK opens Xabinski with weights hidden', !field('xabinskiReveal').classList.contains('hidden') &&
+      field('xabinskiResults').classList.contains('hidden') && !field('xabinskiWeights').innerHTML);
+    const comparison = stages.shift();
+    comparison.run();
+    check('the old and new weights appear after 3.5 seconds', comparison.delay === 3500 &&
+      field('xabinskiWeights').innerHTML.includes('<del>16.67%</del></td><td>16.67%</td>'));
+    stages.shift().run();
+    host.setTimeout = setTimeout;
+    check('the reveal returns to the main menu', !field('menuScreen').classList.contains('hidden') &&
+      field('xabinskiReveal').classList.contains('hidden'));
+    config = vm.runInContext('savedSetup', host);
   }
   host.startGame('pieces', 1234, { config, playMode: 'online', myColor: 'w', isHost: true, roomCode: 'TEST', connText: 'test' });
   host.attachConn(hostConn, true);
@@ -104,17 +139,6 @@ async function runScenario(name, dropFn, movesToMake, custom = false) {
   // Guest must have the board (hello-retry heals a dropped setup).
   const guestGotBoard = sent.guest.some(m => m.t === 'ack') || sent.host.some(m => m.t === 'state');
   check('guest received the board', guestGotBoard);
-  if (custom) {
-    const game = ctx => ctx.document.getElementById('gameScreen');
-    const weights = host.document.getElementById('xabinskiWeights');
-    check('the Xabinski screen gates play on both peers before showing weights',
-      game(host).inert && game(guest).inert && !weights.innerHTML);
-    await sleep(3400);
-    check('the comparison shows crossed-out old weights next to the new weights',
-      game(host).inert && weights.innerHTML.includes('<del>16.67%</del></td><td>16.67%</td>'));
-    await sleep(3500);
-    check('play is available after the weight comparison', !game(host).inert && !game(guest).inert);
-  }
 
   // Play movesToMake plies, alternating host/guest, via the real UI entry point.
   for (let ply = 0; ply < movesToMake; ply++) {
@@ -145,6 +169,9 @@ async function runScenario(name, dropFn, movesToMake, custom = false) {
     await sleep(100);
     const snapshot = ctx => vm.runInContext('JSON.stringify(serializeState(state))', ctx);
     check('custom rematch regenerates the same board on both peers', snapshot(host) === snapshot(guest));
+    check('reveal stays closed during the game and rematch',
+      host.document.getElementById('xabinskiReveal').classList.contains('hidden') &&
+      !vm.runInContext('Boolean(xabinskiTimer)', guest));
   }
   // Cleanup timers so the process can exit.
   host.backToMenu(); guest.backToMenu();
