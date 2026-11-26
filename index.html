@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RNG Chess v1.2 — kill-all-kings rules, bot crash fix, square board -->
+<!-- RNG Chess v1.2.1 — v1.2 rules: game ends only when a side loses its last king; stalemate, threefold repetition and the 50-move rule are draws; i18n: 7 languages; advanced distributions + Xabinski reveal -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -18,6 +18,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .logo span{color:var(--gold)}
 .tag{color:var(--mut);font-size:13px;margin-top:2px}
 .badge{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--mut);white-space:nowrap}
+#langSelect{padding:8px 10px;font-size:14px;font-weight:700}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
 h2{font-size:19px;margin-bottom:6px}
 p{color:var(--mut);font-size:14px;line-height:1.5}
@@ -105,79 +106,80 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
 <body>
 <div class="wrap">
 <header>
-  <div><div class="logo">🎲 RNG <span>CHESS</span></div><div class="tag">Every game is a new roll. No two boards alike. Free forever.</div></div>
-  <div class="badge">FREE &nbsp;•&nbsp; NO SIGN-UP &nbsp;•&nbsp; PC + MOBILE</div>
+  <div><div class="logo">🎲 RNG <span>CHESS</span></div><div class="tag" data-i18n="tagline">Every game is a new roll. No two boards alike. Free forever.</div></div>
+  <div class="badge" data-i18n="badge">FREE &nbsp;•&nbsp; NO SIGN-UP &nbsp;•&nbsp; PC + MOBILE</div>
+  <select id="langSelect" data-i18n-aria="langLabel" aria-label="Language"><option value="en">EN</option><option value="pt">PT</option><option value="es">ES</option><option value="zh">ZH</option><option value="ja">JA</option><option value="fr">FR</option><option value="ko">KO</option></select>
 </header>
 
 <!-- ============ MENU ============ -->
 <div id="menuScreen">
   <div class="card">
-    <h2>Pick a mode</h2>
-    <p>Two modes. That's it. The dice decide the rest.</p>
+    <h2 data-i18n="pickMode">Pick a mode</h2>
+    <p data-i18n="pickModeSub">Two modes. That's it. The dice decide the rest.</p>
     <div class="modes">
       <button class="mode sel" id="modePieces" type="button">
-        <span class="dice">🎲</span><b>1 &nbsp;Random Pieces</b>
-        <p>All 16 pieces per side spawn on the normal starting squares — but <b style="color:#fff">which</b> piece lands on each square is completely random. Multiple kings, zero kings, five queens… anything goes.</p>
+        <span class="dice">🎲</span><b data-i18n="modePiecesTitle">1 &nbsp;Random Pieces</b>
+        <p data-i18n-html="modePiecesDesc">All 16 pieces per side spawn on the normal starting squares — but <b style="color:#fff">which</b> piece lands on each square is completely random. Multiple kings, zero kings, five queens… anything goes.</p>
       </button>
       <button class="mode" id="modeEverything" type="button">
-        <span class="dice">🎲🎲🎲</span><b>2 &nbsp;RANDOM EVERYTHING</b>
-        <p>Piece count is random. Piece types are random. Squares are random. No limits. If you start with no king, you lose on the spot.</p>
+        <span class="dice">🎲🎲🎲</span><b data-i18n="modeEverythingTitle">2 &nbsp;RANDOM EVERYTHING</b>
+        <p data-i18n-html="modeEverythingDesc">Piece count is random. Piece types are random. Squares are random. No limits. If you start with no king, you lose on the spot.</p>
       </button>
     </div>
-    <button id="openAdvanced" type="button" class="ghost setup-options">Advanced settings</button>
+    <button id="openAdvanced" type="button" class="ghost setup-options" data-i18n="advTitle">Advanced settings</button>
     <div class="row">
-      <label for="nameInput" style="color:var(--mut);font-size:14px">Your name</label>
+      <label for="nameInput" style="color:var(--mut);font-size:14px" data-i18n="yourName">Your name</label>
       <input type="text" id="nameInput" placeholder="e.g. Henrique" maxlength="20" style="flex:1;min-width:140px">
-      <label for="botLevel" style="color:var(--mut);font-size:14px">Bot</label>
-      <select id="botLevel"><option value="medium">Medium (greedy)</option><option value="easy">Easy (random)</option></select>
+      <label for="botLevel" style="color:var(--mut);font-size:14px" data-i18n="botLabel">Bot</label>
+      <select id="botLevel"><option value="medium" data-i18n="botMedium">Medium (greedy)</option><option value="easy" data-i18n="botEasy">Easy (random)</option></select>
     </div>
     <div class="btn-grid">
-      <button id="btnCreate" type="button">➕ Create room<br><small style="font-weight:500;font-size:12px">get a code, send it to a friend</small></button>
-      <button id="btnAnyone" type="button" class="ghost">🌍 Play anyone<br><small style="font-weight:500;font-size:12px">matched with a stranger</small></button>
-      <button id="btnBot" type="button" class="ghost">🤖 Play the bot<br><small style="font-weight:500;font-size:12px">solo, right now</small></button>
-      <button id="btnLocal" type="button" class="ghost">👥 Local 2-player<br><small style="font-weight:500;font-size:12px">same screen, pass &amp; play</small></button>
+      <button id="btnCreate" type="button" data-i18n-html="btnCreate">➕ Create room<br><small style="font-weight:500;font-size:12px">get a code, send it to a friend</small></button>
+      <button id="btnAnyone" type="button" class="ghost" data-i18n-html="btnAnyone">🌍 Play anyone<br><small style="font-weight:500;font-size:12px">matched with a stranger</small></button>
+      <button id="btnBot" type="button" class="ghost" data-i18n-html="btnBot">🤖 Play the bot<br><small style="font-weight:500;font-size:12px">solo, right now</small></button>
+      <button id="btnLocal" type="button" class="ghost" data-i18n-html="btnLocal">👥 Local 2-player<br><small style="font-weight:500;font-size:12px">same screen, pass &amp; play</small></button>
     </div>
     <div class="row">
-      <input type="text" id="joinCode" placeholder="Room code — e.g. KQ7B" maxlength="8" style="flex:1;text-transform:uppercase">
-      <button id="btnJoin" type="button" class="ghost">Join room →</button>
+      <input type="text" id="joinCode" data-i18n-ph="joinPh" placeholder="Room code — e.g. KQ7B" maxlength="8" style="flex:1;text-transform:uppercase">
+      <button id="btnJoin" type="button" class="ghost" data-i18n="btnJoin">Join room →</button>
     </div>
     <p id="menuMsg" style="margin-top:10px;min-height:20px"></p>
   </div>
 
   <div class="card rules" style="margin-top:14px">
-    <h2>How RNG Chess works</h2>
+    <h2 data-i18n="rulesTitle">How RNG Chess works</h2>
     <ul>
-      <li><b>Win by killing kings.</b> If a side has several kings, <b>all</b> of them must be captured. Capturing one just thins the herd.</li>
-      <li><b>No king at the start = instant loss.</b> With default settings, each side with pieces has a 5% chance of rolling zero kings. One king is the most common result.</li>
-      <li><b>Opening rolls protect kings.</b> A board is re-rolled if any king starts in check or if both sides have kings and White has no move. If a first move can put a king in check, the board is re-rolled 90% of the time.</li>
-      <li><b>Normal chess moves otherwise.</b> Pawns, knights, bishops, rooks, queens and kings all move the usual way. Pawns promote on the last rank (you pick). En passant works. There is <b>no castling</b> — with random pieces it would be chaos.</li>
-      <li><b>Kings are captured like any other piece.</b> If your king is attacked and you don't save it, it dies — you lose only when your last king falls. There is no checkmate.</li>
-      <li><b>Only the last king matters:</b> the game ends only when a side loses its last king. If a side has no moves at all, that's stalemate — a draw. Repetition and the 50-move rule are draws too.</li>
-      <li><b>White moves first.</b> The room creator plays White (colours swap on rematch).</li>
-    <li><b>Moves always arrive.</b> Every move sends the full board, the other side confirms it, and both sides compare notes every few seconds — if a move ever gets lost, the boards repair themselves.</li>
+      <li data-i18n-html="rule1"><b>Win by killing kings.</b> If a side has several kings, <b>all</b> of them must be captured. Capturing one just thins the herd.</li>
+      <li data-i18n-html="rule2"><b>No king at the start = instant loss.</b> With default settings, each side with pieces has a 5% chance of rolling zero kings. One king is the most common result.</li>
+      <li data-i18n-html="rule3"><b>Opening rolls protect kings.</b> A board is re-rolled if any king starts in check or if both sides have kings and White has no move. If a first move can put a king in check, the board is re-rolled 90% of the time.</li>
+      <li data-i18n-html="rule4"><b>Normal chess moves otherwise.</b> Pawns, knights, bishops, rooks, queens and kings all move the usual way. Pawns promote on the last rank (you pick). En passant works. There is <b>no castling</b> — with random pieces it would be chaos.</li>
+      <li data-i18n-html="rule5"><b>Kings are captured like any other piece.</b> If your king is attacked and you don't save it, it dies — you lose only when your last king falls. There is no checkmate.</li>
+      <li data-i18n-html="rule6"><b>Only the last king matters:</b> the game ends only when a side loses its last king. If a side has no moves at all, that's stalemate — a draw. Repetition and the 50-move rule are draws too.</li>
+      <li data-i18n-html="rule7"><b>White moves first.</b> The room creator plays White (colours swap on rematch).</li>
+    <li data-i18n-html="rule8"><b>Moves always arrive.</b> Every move sends the full board, the other side confirms it, and both sides compare notes every few seconds — if a move ever gets lost, the boards repair themselves.</li>
     </ul>
   </div>
 </div>
 
 <section id="advancedScreen" class="card hidden" aria-labelledby="advancedTitle">
-  <h2 id="advancedTitle" tabindex="-1">Advanced settings</h2>
+  <h2 id="advancedTitle" tabindex="-1" data-i18n="advTitle">Advanced settings</h2>
   <form id="advancedForm" novalidate>
-    <label><input id="customSetup" type="checkbox"> Customize piece counts</label>
+    <label><input id="customSetup" type="checkbox"> <span data-i18n="advCustomize">Customize piece counts</span></label>
     <div id="customFields" hidden>
       <div class="row">
-        <label>Central piece <select id="axisCenter"></select></label>
-        <label>Axis distribution <select id="axisDistribution"></select></label>
+        <label><span data-i18n="advCentralPiece">Central piece</span> <select id="axisCenter"></select></label>
+        <label><span data-i18n="advAxisDist">Axis distribution</span> <select id="axisDistribution"></select></label>
         <label id="axisScaleLabel"><span id="axisParameterName">Axis standard deviation</span> <input id="axisScale" type="number" min="0.1" max="64" step="any" value="1.5"></label>
-        <button id="shuffleAxis" type="button" class="ghost">Shuffle axis</button>
+        <button id="shuffleAxis" type="button" class="ghost" data-i18n="advShuffleAxis">Shuffle axis</button>
       </div>
       <p id="axisOrder"></p>
-      <p>Reference shares are calculated with a uniform axis and add up to 100%. Editing a share adjusts that piece’s mean and redistributes the remaining share across the other pieces. The selected axis determines the final weights, shown after OK.</p>
+      <p data-i18n="advRefSharesNote">Reference shares are calculated with a uniform axis and add up to 100%. Editing a share adjusts that piece’s mean and redistributes the remaining share across the other pieces. The selected axis determines the final weights, shown after OK.</p>
       <div class="piece-settings" id="pieceSettings"></div>
       <p id="setupError" role="status"></p>
     </div>
     <div class="row">
-      <button type="submit">OK</button>
-      <button id="cancelAdvanced" type="button" class="ghost">Cancel</button>
+      <button type="submit" data-i18n="advOk">OK</button>
+      <button id="cancelAdvanced" type="button" class="ghost" data-i18n="advCancel">Cancel</button>
     </div>
   </form>
 </section>
@@ -188,47 +190,47 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
     <div>
       <div class="board-wrap"><div class="board" id="board"></div></div>
       <div class="row" style="justify-content:space-between">
-        <button class="ghost small" id="btnFlip" type="button">⇅ Flip board</button>
+        <button class="ghost small" id="btnFlip" type="button" data-i18n="flipBoard">⇅ Flip board</button>
         <button class="ghost small" id="btnSound" type="button">🔊 Sound on</button>
-        <button class="ghost small" id="btnMenu" type="button">← Menu</button>
+        <button class="ghost small" id="btnMenu" type="button" data-i18n="menuBtn">← Menu</button>
       </div>
     </div>
     <div class="panel">
       <div class="status" id="statusBox">White to move<small id="statusSub"></small></div>
       <div class="kings" id="kingsBox"></div>
       <div class="card" style="padding:14px">
-        <h3>Room</h3>
+        <h3 data-i18n="roomHeading">Room</h3>
         <div class="conn" id="connBox">Local game</div>
         <div id="roomBox" class="hidden" style="margin-top:8px"><span class="roomcode" id="roomCodeText"></span><br>
-        <button class="ghost small" id="btnCopy" type="button" style="margin-top:8px">Copy code / link</button></div>
-        <h3>Captured</h3>
+        <button class="ghost small" id="btnCopy" type="button" style="margin-top:8px" data-i18n="copyBtn">Copy code / link</button></div>
+        <h3 data-i18n="capturedHeading">Captured</h3>
         <div class="captured" id="capWhite">♔ White took: —</div>
         <div class="captured" id="capBlack">♚ Black took: —</div>
-        <h3>Moves</h3>
+        <h3 data-i18n="movesHeading">Moves</h3>
         <div class="moves" id="movesBox">No moves yet — the dice have spoken, now you move.</div>
         <div class="row" style="margin-top:14px">
-          <button id="btnRematch" type="button" class="small">🎲 Rematch (new roll)</button>
-          <button id="btnResign" type="button" class="danger small">🏳 Resign</button>
+          <button id="btnRematch" type="button" class="small" data-i18n="rematchBtn">🎲 Rematch (new roll)</button>
+          <button id="btnResign" type="button" class="danger small" data-i18n="resignBtn">🏳 Resign</button>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<footer> RNG Chess v1.2 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.<br>
-Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.</footer>
+<footer><span data-i18n="footer1">RNG Chess v1.2.1 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.</span><br>
+<span data-i18n="footer2">Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.</span></footer>
 </div>
 
 <div id="promoModal" class="modal hidden"><div class="box">
-  <h2>Promote your pawn</h2><p>Pick a piece. (The dice are watching.)</p>
+  <h2 data-i18n="promoTitle">Promote your pawn</h2><p data-i18n="promoSub">Pick a piece. (The dice are watching.)</p>
   <div class="promo-pieces" id="promoPieces"></div>
 </div></div>
 
 <div id="overModal" class="modal hidden"><div class="box">
   <h2 id="overTitle">White wins</h2><p id="overReason"></p>
   <div class="row" style="justify-content:center;margin-top:16px">
-    <button id="btnOverRematch" type="button">🎲 Rematch</button>
-    <button id="btnOverMenu" type="button" class="ghost">Menu</button>
+    <button id="btnOverRematch" type="button" data-i18n="overRematchBtn">🎲 Rematch</button>
+    <button id="btnOverMenu" type="button" class="ghost" data-i18n="overMenuBtn">Menu</button>
   </div>
 </div></div>
 
@@ -238,11 +240,11 @@ Room codes &amp; matchmaking run peer-to-peer in your browser (WebRTC) — no ga
     <img src="Xabinski!.jpeg" alt="">
     <div id="xabinskiResults" class="hidden" aria-live="polite">
       <table>
-        <thead><tr><th scope="col">Piece</th><th scope="col">Previous</th><th scope="col">New</th></tr></thead>
+        <thead><tr><th scope="col" data-i18n="xabPiece">Piece</th><th scope="col" data-i18n="xabPrev">Previous</th><th scope="col" data-i18n="xabNew">New</th></tr></thead>
         <tbody id="xabinskiWeights"></tbody>
       </table>
       <p class="xabinski-quote" lang="pt-BR">Você não pode prever o aleatório</p>
-      <p>Expected shares for <span id="xabinskiMode"></span>, including starting pawn promotions, before opening re-rolls.</p>
+      <p id="xabinskiExpected">Expected shares for <span id="xabinskiMode"></span>, including starting pawn promotions, before opening re-rolls.</p>
     </div>
   </div>
 </div>
@@ -619,17 +621,17 @@ function legalMoves(state){
 function posKey(board,turn,ep){ let s=''; for(const p of board) s+=p?p.c+p.t:'..'; return s+turn+(ep>=0?('e'+ep):''); }
 function evaluate(st){
   const wk=countKings(st.board,'w'), bk=countKings(st.board,'b');
-  if(wk===0&&bk===0) return {over:true,winner:null,reason:'No kings left on either side. Draw — re-roll!'};
-  if(wk===0) return {over:true,winner:'b',reason:'White has no king left. Black wins!'};
-  if(bk===0) return {over:true,winner:'w',reason:'Black has no king left. White wins!'};
+  if(wk===0&&bk===0) return {over:true,winner:null,reason:'No kings left on either side. Draw — re-roll!',reasonKey:'reasonDrawNoKings'};
+  if(wk===0) return {over:true,winner:'b',reason:'White has no king left. Black wins!',reasonKey:'reasonWhiteNoKing'};
+  if(bk===0) return {over:true,winner:'w',reason:'Black has no king left. White wins!',reasonKey:'reasonBlackNoKing'};
   const moves=legalMoves(st);
   if(moves.length===0){
     // No checkmate in RNG Chess: with no moves at all it is stalemate.
-    return {over:true,winner:null,reason:'No legal moves at all — stalemate. Draw.'};
+    return {over:true,winner:null,reason:'No legal moves at all — stalemate. Draw.',reasonKey:'reasonStalemate'};
   }
-  if(st.halfmove>=100) return {over:true,winner:null,reason:'Fifty-move rule — draw.'};
-  if((st.posCounts[posKey(st.board,st.turn,st.ep)]||0)>=3) return {over:true,winner:null,reason:'Same position three times — draw.'};
-  return {over:false,winner:null,reason:''};
+  if(st.halfmove>=100) return {over:true,winner:null,reason:'Fifty-move rule — draw.',reasonKey:'reasonFifty'};
+  if((st.posCounts[posKey(st.board,st.turn,st.ep)]||0)>=3) return {over:true,winner:null,reason:'Same position three times — draw.',reasonKey:'reasonRepetition'};
+  return {over:false,winner:null,reason:'',reasonKey:''};
 }
 function kingInCheck(board,color,kings){
   return kings.some(square=>isAttacked(board,(square/8)|0,square%8,opp(color)));
@@ -685,7 +687,7 @@ function doMove(st,req){
   st.turn=opp(st.turn);
   st.history.push({from:mv.from,to:mv.to,piece:piece.t,color:piece.c,captured:res.captured?res.captured.t:null,promotion:mv.promotion,ep:!!mv.ep});
   const key=posKey(st.board,st.turn,st.ep); st.posCounts[key]=(st.posCounts[key]||0)+1;
-  const ev=evaluate(st); st.over=ev.over; st.winner=ev.winner; st.reason=ev.reason;
+  const ev=evaluate(st); st.over=ev.over; st.winner=ev.winner; st.reason=ev.reason; st.reasonKey=ev.reasonKey;
   return mv;
 }
 function botMove(st,difficulty){
@@ -702,7 +704,7 @@ function botMove(st,difficulty){
   }
   return best;
 }
-function serializeState(st){ return {mode:st.mode,seed:st.seed,board:st.board,turn:st.turn,ep:st.ep,halfmove:st.halfmove,fullmove:st.fullmove,history:st.history,posCounts:st.posCounts,over:st.over,winner:st.winner,reason:st.reason,...(st.config?{config:st.config}:{})}; }
+function serializeState(st){ return {mode:st.mode,seed:st.seed,board:st.board,turn:st.turn,ep:st.ep,halfmove:st.halfmove,fullmove:st.fullmove,history:st.history,posCounts:st.posCounts,over:st.over,winner:st.winner,reason:st.reason,reasonKey:st.reasonKey||'',...(st.config?{config:st.config}:{})}; }
 function deserializeState(s){ const st=Object.assign({},s); st.board=s.board.map(p=>p?{t:p.t,c:p.c}:null); return st; }
 if(typeof module!=='undefined'&&module.exports){ module.exports={TYPES,VAL,genSetup,countKings,countPieces,kingsOf,pieceCounts,isAttacked,pseudoMoves,applyMoveToBoard,legalMoves,posKey,evaluate,newGame,acceptsOpening,doMove,botMove,serializeState,deserializeState,mulberry32,sqName,opp,finalPieceWeights,referencePieceWeights,calibrateReferenceShare}; }
 </script>
@@ -724,6 +726,1046 @@ let lastAckedN=-1, resendTimer=null, heartbeatTimer=null, helloTimer=null, state
 function boardHashOf(st){ let h=5381; const s=posKey(st.board,st.turn,st.ep)+'|'+st.history.length; for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))>>>0; return h; }
 const $=id=>document.getElementById(id);
 const myName=()=>($('nameInput').value||'').trim()||'Player';
+/* ---- i18n (v1.2.1): 7 languages. English is the default and the fallback
+   for any missing key. Player names, room codes and "RNG Chess" are never
+   translated. "Xabinski" is never translated. Choice persists in
+   localStorage under 'lang'. ---- */
+const LANGS = ['en','pt','es','zh','ja','fr','ko'];
+const I18N = {
+ "en": {
+  "pageTitle": "RNG Chess — Random Pieces. Random Everything. Free.",
+  "tagline": "Every game is a new roll. No two boards alike. Free forever.",
+  "badge": "FREE • NO SIGN-UP • PC + MOBILE",
+  "langLabel": "Language",
+  "pickMode": "Pick a mode",
+  "pickModeSub": "Two modes. That's it. The dice decide the rest.",
+  "modePiecesTitle": "1 Random Pieces",
+  "modePiecesDesc": "All 16 pieces per side spawn on the normal starting squares — but <b>which</b> piece lands on each square is completely random. Multiple kings, zero kings, five queens… anything goes.",
+  "modeEverythingTitle": "2 RANDOM EVERYTHING",
+  "modeEverythingDesc": "Piece count is random. Piece types are random. Squares are random. No limits. If you start with no king, you lose on the spot.",
+  "yourName": "Your name",
+  "botLabel": "Bot",
+  "botMedium": "Medium (greedy)",
+  "botEasy": "Easy (random)",
+  "btnCreate": "➕ Create room<br><small style='font-weight:500;font-size:12px'>get a code, send it to a friend</small>",
+  "btnAnyone": "🌍 Play anyone<br><small style='font-weight:500;font-size:12px'>matched with a stranger</small>",
+  "btnBot": "🤖 Play the bot<br><small style='font-weight:500;font-size:12px'>solo, right now</small>",
+  "btnLocal": "👥 Local 2-player<br><small style='font-weight:500;font-size:12px'>same screen, pass &amp; play</small>",
+  "joinPh": "Room code — e.g. KQ7B",
+  "btnJoin": "Join room →",
+  "rulesTitle": "How RNG Chess works",
+  "rule1": "<b>Win by killing kings.</b> If a side has several kings, <b>all</b> of them must be captured. Capturing one just thins the herd.",
+  "rule2": "<b>No king at the start = instant loss.</b> With default settings, each side with pieces has a 5% chance of rolling zero kings. One king is the most common result.",
+  "rule3": "<b>Opening rolls protect kings.</b> A board is re-rolled if any king starts in check or if both sides have kings and White has no move. If a first move can put a king in check, the board is re-rolled 90% of the time.",
+  "rule4": "<b>Normal chess moves otherwise.</b> Pawns, knights, bishops, rooks, queens and kings all move the usual way. Pawns promote on the last rank (you pick). En passant works. There is <b>no castling</b> — with random pieces it would be chaos.",
+  "rule5": "<b>Kings are captured like any other piece.</b> If your king is attacked and you don't save it, it dies — you lose only when your last king falls. There is no checkmate.",
+  "rule6": "<b>Only the last king matters:</b> the game ends only when a side loses its last king. If a side has no moves at all, that's stalemate — a draw. Repetition and the 50-move rule are draws too.",
+  "rule7": "<b>White moves first.</b> The room creator plays White (colours swap on rematch).",
+  "rule8": "<b>Moves always arrive.</b> Every move sends the full board, the other side confirms it, and both sides compare notes every few seconds — if a move ever gets lost, the boards repair themselves.",
+  "footer1": "RNG Chess v1.2.1 — free, no accounts, no ads. Hosted on Cloudflare Pages. Code on GitHub.",
+  "footer2": "Room codes & matchmaking run peer-to-peer in your browser (WebRTC) — no game server, no cost, nothing to sign up for.",
+  "flipBoard": "⇅ Flip board",
+  "soundOn": "🔊 Sound on",
+  "soundOff": "🔇 Sound off",
+  "menuBtn": "← Menu",
+  "roomHeading": "Room",
+  "capturedHeading": "Captured",
+  "movesHeading": "Moves",
+  "rematchBtn": "🎲 Rematch (new roll)",
+  "resignBtn": "🏳 Resign",
+  "promoTitle": "Promote your pawn",
+  "promoSub": "Pick a piece. (The dice are watching.)",
+  "overRematchBtn": "🎲 Rematch",
+  "overMenuBtn": "Menu",
+  "copyBtn": "Copy code / link",
+  "copiedBtn": "Copied!",
+  "turnWhite": "White to move",
+  "turnBlack": "Black to move",
+  "checkSuffix": " — CHECK!",
+  "yourMove": "Your move.",
+  "waitingOpp": "Waiting for opponent…",
+  "botThinking": "Bot is thinking…",
+  "winWhite": "♔ White wins!",
+  "winBlack": "♚ Black wins!",
+  "drawTitle": "🤝 Draw",
+  "kingsWhite": "♔ White kings: {n}",
+  "kingsBlack": "♚ Black kings: {n}",
+  "seedLabel": "Seed {n}",
+  "modePiecesShort": "Random Pieces",
+  "modeEverythingShort": "RANDOM EVERYTHING",
+  "capWhite": "♔ White took: {list}",
+  "capBlack": "♚ Black took: {list}",
+  "capNone": "—",
+  "movesEmpty": "No moves yet — the dice have spoken, now you move.",
+  "reasonDrawNoKings": "No kings left on either side. Draw — re-roll!",
+  "reasonWhiteNoKing": "White has no king left. Black wins!",
+  "reasonBlackNoKing": "Black has no king left. White wins!",
+  "reasonStalemate": "No legal moves at all — stalemate. Draw.",
+  "reasonRepetition": "Same position three times — draw.",
+  "reasonFifty": "Fifty-move rule — draw.",
+  "resignWhite": "White resigned.",
+  "resignBlack": "Black resigned.",
+  "connLocal": "Local game",
+  "connLocal2p": "Local 2-player — same screen, pass & play.",
+  "connLocalRematch": "Local 2-player — new roll!",
+  "connBot": "You (White) vs Bot ({level}). Bot plays Black.",
+  "connBotSimple": "You (White) vs Bot.",
+  "connOnline": "Online game",
+  "connWaitingFriend": "Room <b>{code}</b> — waiting for your friend to join…<br>Send them the code, or the copy button below.",
+  "connConnectedHost": "<b>Connected!</b> Your friend joined. You are White.",
+  "connConnectedGuest": "<b>Connected!</b> You joined. You are Black.",
+  "connDisconnected": "<b>Opponent disconnected.</b> You can keep looking at the board, or head back to the menu for a new game.",
+  "connLobbyWaiting": "In the lobby (slot {slot}) — waiting for an opponent to join…",
+  "connRematch": "Online game — rematch! Colours swapped.",
+  "connGuestStart": "Online game — you are <b>Black</b>. White moves first.",
+  "msgPeerFail": "Could not load the multiplayer library (PeerJS). Check your connection and try again — bot and local play still work.",
+  "msgPeerFailShort": "Could not load the multiplayer library (PeerJS). Check your connection and try again.",
+  "msgCreatingRoom": "Creating room {code}…",
+  "msgRoomLive": "Room {code} is live — send the code to your friend.",
+  "msgCreateFail": "Could not create the room ({err}). Try again.",
+  "msgTypeCode": "Type a room code first.",
+  "msgJoining": "Joining room {code}…",
+  "msgJoinTimeout": "Still trying to reach room {code} — is the code right, and is your friend's room still open?",
+  "msgJoinFail": "Could not join room {code} ({err}). Double-check the code.",
+  "msgJoined": "Joined room {code}! Waiting for the board…",
+  "msgLooking": "Looking for an opponent…",
+  "msgLobbyBusy": "All lobby slots are busy right now — try again in a few seconds, or create a room instead.",
+  "msgLobbyWaiting": "Waiting for an opponent… (lobby slot {slot})",
+  "msgOpponentFound": "Opponent found — good luck!",
+  "msgRematchRequested": "Rematch requested — waiting for host…",
+  "msgRoomDetected": "Room {code} detected — press Join room to enter.",
+  "msgCopyPrompt": "Copy your room link:",
+  "botLevelMedium": "medium",
+  "botLevelEasy": "easy",
+  "advTitle": "Advanced settings",
+  "advCustomize": "Customize piece counts",
+  "advCentralPiece": "Central piece",
+  "advAxisDist": "Axis distribution",
+  "advAxisStdDev": "Axis standard deviation",
+  "advAxisRefMean": "Axis reference mean",
+  "advShuffleAxis": "Shuffle axis",
+  "advRefSharesNote": "Reference shares are calculated with a uniform axis and add up to 100%. Editing a share adjusts that piece’s mean and redistributes the remaining share across the other pieces. The selected axis determines the final weights, shown after OK.",
+  "advOk": "OK",
+  "advCancel": "Cancel",
+  "pieceK": "King",
+  "pieceQ": "Queen",
+  "pieceR": "Rook",
+  "pieceB": "Bishop",
+  "pieceN": "Knight",
+  "pieceP": "Pawn",
+  "distGaussian": "Gaussian",
+  "distPoisson": "Poisson",
+  "distRayleigh": "Rayleigh",
+  "distUniform": "Uniform",
+  "distLabel": "Distribution",
+  "editBy": "Edit by",
+  "editParameters": "Parameters",
+  "editChance": "Reference share",
+  "refMean": "Reference mean",
+  "stdDev": "Std. deviation",
+  "refSharePct": "Reference share (%)",
+  "setupRangeError": "Use means from 0 to 64 and deviations and axis parameters from 0.1 to 64.",
+  "setupShareError": "Could not reach that share. Try another percentage, distribution or standard deviation.",
+  "xabTitle": "Xabinski!",
+  "xabPiece": "Piece",
+  "xabPrev": "Previous",
+  "xabNew": "New",
+  "xabExpected": "Expected shares for {mode}, including starting pawn promotions, before opening re-rolls.",
+  "msgNoOpening": "No suitable opening was found in {n} rolls. Try again or change the piece settings."
+ },
+ "pt": {
+  "pageTitle": "RNG Chess — Peças Aleatórias. Tudo Aleatório. Grátis.",
+  "tagline": "Cada partida é uma nova rolada de dados. Nenhum tabuleiro é igual ao outro. Grátis para sempre.",
+  "badge": "GRÁTIS • SEM CADASTRO • PC + CELULAR",
+  "langLabel": "Idioma",
+  "pickMode": "Escolha um modo",
+  "pickModeSub": "Dois modos. Só isso. Os dados decidem o resto.",
+  "modePiecesTitle": "1 Peças Aleatórias",
+  "modePiecesDesc": "As 16 peças de cada lado surgem nas casas iniciais normais — mas <b>qual</b> peça cai em cada casa é totalmente aleatório. Vários reis, nenhum rei, cinco damas… tudo pode acontecer.",
+  "modeEverythingTitle": "2 TUDO ALEATÓRIO",
+  "modeEverythingDesc": "A quantidade de peças é aleatória. Os tipos de peça são aleatórios. As casas são aleatórias. Sem limites. Se você começar sem rei, perde na hora.",
+  "yourName": "Seu nome",
+  "botLabel": "Bot",
+  "botMedium": "Médio (ganancioso)",
+  "botEasy": "Fácil (aleatório)",
+  "btnCreate": "➕ Criar sala<br><small style='font-weight:500;font-size:12px'>receba um código e envie a um amigo</small>",
+  "btnAnyone": "🌍 Jogar com qualquer um<br><small style='font-weight:500;font-size:12px'>partida com um desconhecido</small>",
+  "btnBot": "🤖 Jogar contra o bot<br><small style='font-weight:500;font-size:12px'>sozinho, agora mesmo</small>",
+  "btnLocal": "👥 2 jogadores no local<br><small style='font-weight:500;font-size:12px'>mesma tela, revezando</small>",
+  "joinPh": "Código da sala — ex.: KQ7B",
+  "btnJoin": "Entrar na sala →",
+  "rulesTitle": "Como funciona o RNG Chess",
+  "rule1": "<b>Vence quem matar os reis.</b> Se um lado tiver vários reis, <b>todos</b> precisam ser capturados. Capturar um só diminui o grupo.",
+  "rule2": "<b>Sem rei no início = derrota imediata.</b> Com as configurações padrão, cada lado com peças tem 5% de chance de rolar zero reis. Um rei é o resultado mais comum.",
+  "rule3": "<b>As roladas de abertura protegem os reis.</b> O tabuleiro é rolado de novo se algum rei começar em xeque ou se os dois lados tiverem reis e as Brancas não tiverem lance. Se um primeiro lance puder colocar um rei em xeque, o tabuleiro é rolado de novo em 90% das vezes.",
+  "rule4": "<b>De resto, os lances são os normais do xadrez.</b> Peões, cavalos, bispos, torres, damas e reis se movem do jeito usual. Peões promovem na última fileira (você escolhe). En passant funciona. <b>Não há roque</b> — com peças aleatórias seria um caos.",
+  "rule5": "<b>Reis são capturados como qualquer outra peça.</b> Se o seu rei for atacado e você não o salvar, ele morre — você só perde quando cair o seu último rei. Não há xeque-mate.",
+  "rule6": "<b>Só o último rei importa:</b> a partida só termina quando um lado perde o seu último rei. Se um lado não tiver nenhum lance, é afogamento — empate. Repetição e a regra dos 50 lances também são empates.",
+  "rule7": "<b>As Brancas jogam primeiro.</b> Quem cria a sala joga de Brancas (as cores trocam na revanche).",
+  "rule8": "<b>Os lances sempre chegam.</b> Cada lance envia o tabuleiro inteiro, o outro lado confirma, e os dois lados comparam os tabuleiros a cada poucos segundos — se um lance se perder, os tabuleiros se corrigem sozinhos.",
+  "footer1": "RNG Chess v1.2.1 — grátis, sem contas, sem anúncios. Hospedado no Cloudflare Pages. Código no GitHub.",
+  "footer2": "Os códigos de sala e o pareamento funcionam ponto a ponto no seu navegador (WebRTC) — sem servidor de jogo, sem custo, sem cadastro.",
+  "flipBoard": "⇅ Virar tabuleiro",
+  "soundOn": "🔊 Som ligado",
+  "soundOff": "🔇 Som desligado",
+  "menuBtn": "← Menu",
+  "roomHeading": "Sala",
+  "capturedHeading": "Capturadas",
+  "movesHeading": "Lances",
+  "rematchBtn": "🎲 Revanche (nova rolada)",
+  "resignBtn": "🏳 Desistir",
+  "promoTitle": "Promova seu peão",
+  "promoSub": "Escolha uma peça. (Os dados estão observando.)",
+  "overRematchBtn": "🎲 Revanche",
+  "overMenuBtn": "Menu",
+  "copyBtn": "Copiar código / link",
+  "copiedBtn": "Copiado!",
+  "turnWhite": "Brancas a jogar",
+  "turnBlack": "Pretas a jogar",
+  "checkSuffix": " — XEQUE!",
+  "yourMove": "Sua vez.",
+  "waitingOpp": "Aguardando o oponente…",
+  "botThinking": "O bot está pensando…",
+  "winWhite": "♔ Brancas vencem!",
+  "winBlack": "♚ Pretas vencem!",
+  "drawTitle": "🤝 Empate",
+  "kingsWhite": "♔ Reis das Brancas: {n}",
+  "kingsBlack": "♚ Reis das Pretas: {n}",
+  "seedLabel": "Seed {n}",
+  "modePiecesShort": "Peças Aleatórias",
+  "modeEverythingShort": "TUDO ALEATÓRIO",
+  "capWhite": "♔ Brancas capturaram: {list}",
+  "capBlack": "♚ Pretas capturaram: {list}",
+  "capNone": "—",
+  "movesEmpty": "Nenhum lance ainda — os dados falaram, agora é a sua vez.",
+  "reasonDrawNoKings": "Não sobrou nenhum rei em nenhum dos lados. Empate — role de novo!",
+  "reasonWhiteNoKing": "As Brancas ficaram sem rei. Pretas vencem!",
+  "reasonBlackNoKing": "As Pretas ficaram sem rei. Brancas vencem!",
+  "reasonStalemate": "Nenhum lance legal — afogamento. Empate.",
+  "reasonRepetition": "Mesma posição três vezes — empate.",
+  "reasonFifty": "Regra dos 50 lances — empate.",
+  "resignWhite": "Brancas desistiram.",
+  "resignBlack": "Pretas desistiram.",
+  "connLocal": "Jogo local",
+  "connLocal2p": "2 jogadores no local — mesma tela, revezando.",
+  "connLocalRematch": "2 jogadores no local — nova rolada!",
+  "connBot": "Você (Brancas) vs Bot ({level}). O bot joga de Pretas.",
+  "connBotSimple": "Você (Brancas) vs Bot.",
+  "connOnline": "Jogo online",
+  "connWaitingFriend": "Sala <b>{code}</b> — aguardando seu amigo entrar…<br>Envie o código a ele, ou use o botão de copiar abaixo.",
+  "connConnectedHost": "<b>Conectado!</b> Seu amigo entrou. Você é as Brancas.",
+  "connConnectedGuest": "<b>Conectado!</b> Você entrou. Você é as Pretas.",
+  "connDisconnected": "<b>Oponente desconectado.</b> Você pode continuar olhando o tabuleiro ou voltar ao menu para uma nova partida.",
+  "connLobbyWaiting": "No saguão (vaga {slot}) — aguardando um oponente entrar…",
+  "connRematch": "Jogo online — revanche! Cores trocadas.",
+  "connGuestStart": "Jogo online — você é as <b>Pretas</b>. As Brancas jogam primeiro.",
+  "msgPeerFail": "Não foi possível carregar a biblioteca de multiplayer (PeerJS). Verifique sua conexão e tente novamente — o bot e o jogo local continuam funcionando.",
+  "msgPeerFailShort": "Não foi possível carregar a biblioteca de multiplayer (PeerJS). Verifique sua conexão e tente novamente.",
+  "msgCreatingRoom": "Criando sala {code}…",
+  "msgRoomLive": "Sala {code} ativa — envie o código ao seu amigo.",
+  "msgCreateFail": "Não foi possível criar a sala ({err}). Tente novamente.",
+  "msgTypeCode": "Digite um código de sala primeiro.",
+  "msgJoining": "Entrando na sala {code}…",
+  "msgJoinTimeout": "Ainda tentando alcançar a sala {code} — o código está certo e a sala do seu amigo ainda está aberta?",
+  "msgJoinFail": "Não foi possível entrar na sala {code} ({err}). Confira o código.",
+  "msgJoined": "Você entrou na sala {code}! Aguardando o tabuleiro…",
+  "msgLooking": "Procurando um oponente…",
+  "msgLobbyBusy": "Todas as vagas do saguão estão ocupadas agora — tente novamente em alguns segundos ou crie uma sala.",
+  "msgLobbyWaiting": "Aguardando um oponente… (vaga {slot} do saguão)",
+  "msgOpponentFound": "Oponente encontrado — boa sorte!",
+  "msgRematchRequested": "Revanche solicitada — aguardando o anfitrião…",
+  "msgRoomDetected": "Sala {code} detectada — pressione Entrar na sala para jogar.",
+  "msgCopyPrompt": "Copie o link da sua sala:",
+  "botLevelMedium": "médio",
+  "botLevelEasy": "fácil",
+  "advTitle": "Configurações avançadas",
+  "advCustomize": "Personalizar a quantidade de peças",
+  "advCentralPiece": "Peça central",
+  "advAxisDist": "Distribuição do eixo",
+  "advAxisStdDev": "Desvio padrão do eixo",
+  "advAxisRefMean": "Média de referência do eixo",
+  "advShuffleAxis": "Embaralhar eixo",
+  "advRefSharesNote": "As participações de referência são calculadas com um eixo uniforme e somam 100%. Editar uma participação ajusta a média daquela peça e redistribui o restante entre as outras peças. O eixo selecionado determina os pesos finais, mostrados após OK.",
+  "advOk": "OK",
+  "advCancel": "Cancelar",
+  "pieceK": "Rei",
+  "pieceQ": "Dama",
+  "pieceR": "Torre",
+  "pieceB": "Bispo",
+  "pieceN": "Cavalo",
+  "pieceP": "Peão",
+  "distGaussian": "Gaussiana",
+  "distPoisson": "Poisson",
+  "distRayleigh": "Rayleigh",
+  "distUniform": "Uniforme",
+  "distLabel": "Distribuição",
+  "editBy": "Editar por",
+  "editParameters": "Parâmetros",
+  "editChance": "Participação de referência",
+  "refMean": "Média de referência",
+  "stdDev": "Desvio padrão",
+  "refSharePct": "Participação de referência (%)",
+  "setupRangeError": "Use médias de 0 a 64 e desvios e parâmetros do eixo de 0,1 a 64.",
+  "setupShareError": "Não foi possível alcançar essa participação. Tente outra porcentagem, distribuição ou desvio padrão.",
+  "xabTitle": "Xabinski!",
+  "xabPiece": "Peça",
+  "xabPrev": "Anterior",
+  "xabNew": "Nova",
+  "xabExpected": "Participações esperadas para {mode}, incluindo promoções de peões iniciais, antes das novas roladas de abertura.",
+  "msgNoOpening": "Nenhuma abertura adequada foi encontrada em {n} roladas. Tente novamente ou mude as configurações de peças."
+ },
+ "es": {
+  "pageTitle": "RNG Chess — Piezas aleatorias. Todo aleatorio. Gratis.",
+  "tagline": "Cada partida es una nueva tirada. Ningún tablero se repite. Gratis para siempre.",
+  "badge": "GRATIS • SIN REGISTRO • PC + MÓVIL",
+  "langLabel": "Idioma",
+  "pickMode": "Elige un modo",
+  "pickModeSub": "Dos modos. Eso es todo. Los dados deciden el resto.",
+  "modePiecesTitle": "1 Piezas aleatorias",
+  "modePiecesDesc": "Las 16 piezas de cada lado aparecen en las casillas iniciales normales, pero <b>qué</b> pieza cae en cada casilla es totalmente aleatorio. Varios reyes, cero reyes, cinco damas… todo puede pasar.",
+  "modeEverythingTitle": "2 TODO ALEATORIO",
+  "modeEverythingDesc": "La cantidad de piezas es aleatoria. Los tipos de pieza son aleatorios. Las casillas son aleatorias. Sin límites. Si empiezas sin rey, pierdes en el acto.",
+  "yourName": "Tu nombre",
+  "botLabel": "Bot",
+  "botMedium": "Medio (codicioso)",
+  "botEasy": "Fácil (aleatorio)",
+  "btnCreate": "➕ Crear sala<br><small style='font-weight:500;font-size:12px'>recibe un código y envíaselo a un amigo</small>",
+  "btnAnyone": "🌍 Jugar con cualquiera<br><small style='font-weight:500;font-size:12px'>partida con un desconocido</small>",
+  "btnBot": "🤖 Jugar contra el bot<br><small style='font-weight:500;font-size:12px'>solo, ahora mismo</small>",
+  "btnLocal": "👥 2 jugadores en local<br><small style='font-weight:500;font-size:12px'>misma pantalla, por turnos</small>",
+  "joinPh": "Código de sala — ej.: KQ7B",
+  "btnJoin": "Unirse a la sala →",
+  "rulesTitle": "Cómo funciona RNG Chess",
+  "rule1": "<b>Se gana matando reyes.</b> Si un lado tiene varios reyes, hay que capturar <b>todos</b>. Capturar uno solo reduce el grupo.",
+  "rule2": "<b>Sin rey al inicio = derrota inmediata.</b> Con la configuración predeterminada, cada lado con piezas tiene un 5 % de probabilidad de sacar cero reyes. Un rey es el resultado más común.",
+  "rule3": "<b>Las tiradas de apertura protegen a los reyes.</b> El tablero se vuelve a tirar si algún rey empieza en jaque o si ambos lados tienen reyes y las Blancas no tienen jugada. Si una primera jugada puede poner un rey en jaque, el tablero se vuelve a tirar el 90 % de las veces.",
+  "rule4": "<b>Por lo demás, los movimientos son los normales del ajedrez.</b> Peones, caballos, alfiles, torres, damas y reyes se mueven como siempre. Los peones coronan en la última fila (tú eliges). La captura al paso funciona. <b>No hay enroque</b> — con piezas aleatorias sería un caos.",
+  "rule5": "<b>Los reyes se capturan como cualquier otra pieza.</b> Si tu rey es atacado y no lo salvas, muere; solo pierdes cuando cae tu último rey. No hay jaque mate.",
+  "rule6": "<b>Solo importa el último rey:</b> la partida solo termina cuando un lado pierde su último rey. Si un lado no tiene ninguna jugada, es ahogado — tablas. La repetición y la regla de las 50 jugadas también son tablas.",
+  "rule7": "<b>Las Blancas mueven primero.</b> Quien crea la sala juega con Blancas (los colores se intercambian en la revancha).",
+  "rule8": "<b>Las jugadas siempre llegan.</b> Cada jugada envía el tablero completo, el otro lado lo confirma y ambos lados comparan sus tableros cada pocos segundos; si una jugada se pierde, los tableros se reparan solos.",
+  "footer1": "RNG Chess v1.2.1 — gratis, sin cuentas, sin anuncios. Alojado en Cloudflare Pages. Código en GitHub.",
+  "footer2": "Los códigos de sala y el emparejamiento funcionan de igual a igual en tu navegador (WebRTC): sin servidor de juego, sin costo, sin registro.",
+  "flipBoard": "⇅ Girar tablero",
+  "soundOn": "🔊 Sonido activado",
+  "soundOff": "🔇 Sonido desactivado",
+  "menuBtn": "← Menú",
+  "roomHeading": "Sala",
+  "capturedHeading": "Capturadas",
+  "movesHeading": "Jugadas",
+  "rematchBtn": "🎲 Revancha (nueva tirada)",
+  "resignBtn": "🏳 Rendirse",
+  "promoTitle": "Corona tu peón",
+  "promoSub": "Elige una pieza. (Los dados están mirando.)",
+  "overRematchBtn": "🎲 Revancha",
+  "overMenuBtn": "Menú",
+  "copyBtn": "Copiar código / enlace",
+  "copiedBtn": "¡Copiado!",
+  "turnWhite": "Juegan las Blancas",
+  "turnBlack": "Juegan las Negras",
+  "checkSuffix": " — ¡JAQUE!",
+  "yourMove": "Te toca.",
+  "waitingOpp": "Esperando al oponente…",
+  "botThinking": "El bot está pensando…",
+  "winWhite": "♔ ¡Ganan las Blancas!",
+  "winBlack": "♚ ¡Ganan las Negras!",
+  "drawTitle": "🤝 Tablas",
+  "kingsWhite": "♔ Reyes blancos: {n}",
+  "kingsBlack": "♚ Reyes negros: {n}",
+  "seedLabel": "Semilla {n}",
+  "modePiecesShort": "Piezas aleatorias",
+  "modeEverythingShort": "TODO ALEATORIO",
+  "capWhite": "♔ Las Blancas capturaron: {list}",
+  "capBlack": "♚ Las Negras capturaron: {list}",
+  "capNone": "—",
+  "movesEmpty": "Aún no hay jugadas — los dados han hablado, ahora mueves tú.",
+  "reasonDrawNoKings": "No queda ningún rey en ninguno de los lados. Tablas — ¡vuelve a tirar!",
+  "reasonWhiteNoKing": "Las Blancas se quedaron sin rey. ¡Ganan las Negras!",
+  "reasonBlackNoKing": "Las Negras se quedaron sin rey. ¡Ganan las Blancas!",
+  "reasonStalemate": "Sin jugadas legales — ahogado. Tablas.",
+  "reasonRepetition": "La misma posición tres veces — tablas.",
+  "reasonFifty": "Regla de las 50 jugadas — tablas.",
+  "resignWhite": "Las Blancas se rindieron.",
+  "resignBlack": "Las Negras se rindieron.",
+  "connLocal": "Partida local",
+  "connLocal2p": "2 jugadores en local — misma pantalla, por turnos.",
+  "connLocalRematch": "2 jugadores en local — ¡nueva tirada!",
+  "connBot": "Tú (Blancas) vs Bot ({level}). El bot juega con Negras.",
+  "connBotSimple": "Tú (Blancas) vs Bot.",
+  "connOnline": "Partida en línea",
+  "connWaitingFriend": "Sala <b>{code}</b> — esperando a que tu amigo se una…<br>Envíale el código o usa el botón de copiar de abajo.",
+  "connConnectedHost": "<b>¡Conectado!</b> Tu amigo se unió. Eres las Blancas.",
+  "connConnectedGuest": "<b>¡Conectado!</b> Te uniste. Eres las Negras.",
+  "connDisconnected": "<b>Oponente desconectado.</b> Puedes seguir mirando el tablero o volver al menú para una partida nueva.",
+  "connLobbyWaiting": "En el vestíbulo (puesto {slot}) — esperando a que se una un oponente…",
+  "connRematch": "Partida en línea — ¡revancha! Colores intercambiados.",
+  "connGuestStart": "Partida en línea — eres las <b>Negras</b>. Las Blancas mueven primero.",
+  "msgPeerFail": "No se pudo cargar la biblioteca multijugador (PeerJS). Revisa tu conexión e inténtalo de nuevo; el bot y el juego local siguen funcionando.",
+  "msgPeerFailShort": "No se pudo cargar la biblioteca multijugador (PeerJS). Revisa tu conexión e inténtalo de nuevo.",
+  "msgCreatingRoom": "Creando sala {code}…",
+  "msgRoomLive": "La sala {code} está activa — envía el código a tu amigo.",
+  "msgCreateFail": "No se pudo crear la sala ({err}). Inténtalo de nuevo.",
+  "msgTypeCode": "Escribe primero un código de sala.",
+  "msgJoining": "Uniéndose a la sala {code}…",
+  "msgJoinTimeout": "Sigo intentando llegar a la sala {code} — ¿el código es correcto y la sala de tu amigo sigue abierta?",
+  "msgJoinFail": "No se pudo unir a la sala {code} ({err}). Revisa el código.",
+  "msgJoined": "¡Te uniste a la sala {code}! Esperando el tablero…",
+  "msgLooking": "Buscando un oponente…",
+  "msgLobbyBusy": "Todos los puestos del vestíbulo están ocupados ahora mismo — inténtalo de nuevo en unos segundos o crea una sala.",
+  "msgLobbyWaiting": "Esperando un oponente… (puesto {slot} del vestíbulo)",
+  "msgOpponentFound": "¡Oponente encontrado — buena suerte!",
+  "msgRematchRequested": "Revancha solicitada — esperando al anfitrión…",
+  "msgRoomDetected": "Sala {code} detectada — pulsa Unirse a la sala para entrar.",
+  "msgCopyPrompt": "Copia el enlace de tu sala:",
+  "botLevelMedium": "medio",
+  "botLevelEasy": "fácil",
+  "advTitle": "Ajustes avanzados",
+  "advCustomize": "Personalizar la cantidad de piezas",
+  "advCentralPiece": "Pieza central",
+  "advAxisDist": "Distribución del eje",
+  "advAxisStdDev": "Desviación estándar del eje",
+  "advAxisRefMean": "Media de referencia del eje",
+  "advShuffleAxis": "Mezclar eje",
+  "advRefSharesNote": "Las participaciones de referencia se calculan con un eje uniforme y suman 100 %. Editar una participación ajusta la media de esa pieza y redistribuye el resto entre las demás piezas. El eje seleccionado determina los pesos finales, que se muestran después de OK.",
+  "advOk": "Aceptar",
+  "advCancel": "Cancelar",
+  "pieceK": "Rey",
+  "pieceQ": "Dama",
+  "pieceR": "Torre",
+  "pieceB": "Alfil",
+  "pieceN": "Caballo",
+  "pieceP": "Peón",
+  "distGaussian": "Gaussiana",
+  "distPoisson": "Poisson",
+  "distRayleigh": "Rayleigh",
+  "distUniform": "Uniforme",
+  "distLabel": "Distribución",
+  "editBy": "Editar por",
+  "editParameters": "Parámetros",
+  "editChance": "Participación de referencia",
+  "refMean": "Media de referencia",
+  "stdDev": "Desv. estándar",
+  "refSharePct": "Participación de referencia (%)",
+  "setupRangeError": "Usa medias de 0 a 64 y desviaciones y parámetros del eje de 0,1 a 64.",
+  "setupShareError": "No se pudo alcanzar esa participación. Prueba otro porcentaje, distribución o desviación estándar.",
+  "xabTitle": "Xabinski!",
+  "xabPiece": "Pieza",
+  "xabPrev": "Anterior",
+  "xabNew": "Nueva",
+  "xabExpected": "Participaciones esperadas para {mode}, incluidas las coronaciones de peones iniciales, antes de las nuevas tiradas de apertura.",
+  "msgNoOpening": "No se encontró ninguna apertura adecuada en {n} tiradas. Inténtalo de nuevo o cambia los ajustes de piezas."
+ },
+ "zh": {
+  "pageTitle": "RNG Chess——随机棋子，完全随机，免费。",
+  "tagline": "每一局都是全新掷骰。没有两盘相同的棋局。永远免费。",
+  "badge": "免费 • 无需注册 • 支持电脑与手机",
+  "langLabel": "语言",
+  "pickMode": "选择模式",
+  "pickModeSub": "两种模式，就这么简单。剩下的交给骰子。",
+  "modePiecesTitle": "1 随机棋子",
+  "modePiecesDesc": "每方 16 枚棋子都出现在正常的起始格上——但每个格子上是<b>哪种</b>棋子完全随机。多个王、没有王、五个后……什么都可能出现。",
+  "modeEverythingTitle": "2 完全随机",
+  "modeEverythingDesc": "棋子数量随机。棋子种类随机。位置随机。没有任何限制。如果你开局没有王，立即判负。",
+  "yourName": "你的名字",
+  "botLabel": "机器人",
+  "botMedium": "中等（贪心）",
+  "botEasy": "简单（随机）",
+  "btnCreate": "➕ 创建房间<br><small style='font-weight:500;font-size:12px'>获取房间代码，发给朋友</small>",
+  "btnAnyone": "🌍 随机匹配<br><small style='font-weight:500;font-size:12px'>与陌生人对弈</small>",
+  "btnBot": "🤖 与机器人对弈<br><small style='font-weight:500;font-size:12px'>单人，马上开始</small>",
+  "btnLocal": "👥 本地双人<br><small style='font-weight:500;font-size:12px'>同一屏幕，轮流下棋</small>",
+  "joinPh": "房间代码——例如 KQ7B",
+  "btnJoin": "加入房间 →",
+  "rulesTitle": "RNG Chess 玩法",
+  "rule1": "<b>吃掉王即可获胜。</b>如果一方有多个王，必须吃掉<b>全部</b>。只吃掉一个只是减少了数量。",
+  "rule2": "<b>开局没有王＝立即判负。</b>使用默认设置时，每方有 5% 的概率掷出零个王。一个王是最常见的结果。",
+  "rule3": "<b>开局掷骰会保护王。</b>如果任何王开局就被将军，或双方都有王而白方无棋可走，就会重新掷骰。如果第一步就能将军，90% 的情况下会重新掷骰。",
+  "rule4": "<b>其他走法与普通国际象棋相同。</b>兵、马、象、车、后、王都按常规走法移动。兵到达底线可以升变（由你选择）。吃过路兵有效。<b>没有王车易位</b>——棋子随机的话会乱套。",
+  "rule5": "<b>王和其他棋子一样可以被吃掉。</b>如果你的王受到攻击而你没有救它，它就会死——只有当你最后一个王倒下时才算输。没有将死。",
+  "rule6": "<b>只有最后一个王才重要：</b>只有当一方失去最后一个王时，对局才结束。如果一方完全无棋可走，那就是僵局——和棋。重复局面和 50 步规则也是和棋。",
+  "rule7": "<b>白方先行。</b>创建房间者执白（再来一局时交换颜色）。",
+  "rule8": "<b>走法总能送达。</b>每一步都会发送完整棋盘，对方确认收到，双方每隔几秒核对一次——如果某步丢失，棋盘会自动修复。",
+  "footer1": "RNG Chess v1.2.1——免费，无需账号，没有广告。托管于 Cloudflare Pages。代码见 GitHub。",
+  "footer2": "房间代码与匹配通过浏览器点对点连接（WebRTC）运行——没有游戏服务器，没有费用，无需注册。",
+  "flipBoard": "⇅ 翻转棋盘",
+  "soundOn": "🔊 音效开",
+  "soundOff": "🔇 音效关",
+  "menuBtn": "← 菜单",
+  "roomHeading": "房间",
+  "capturedHeading": "已吃棋子",
+  "movesHeading": "走法",
+  "rematchBtn": "🎲 再来一局（重新掷骰）",
+  "resignBtn": "🏳 认输",
+  "promoTitle": "兵升变",
+  "promoSub": "选择一个棋子。（骰子在看着呢。）",
+  "overRematchBtn": "🎲 再来一局",
+  "overMenuBtn": "菜单",
+  "copyBtn": "复制代码 / 链接",
+  "copiedBtn": "已复制！",
+  "turnWhite": "白方走棋",
+  "turnBlack": "黑方走棋",
+  "checkSuffix": " —— 将军！",
+  "yourMove": "轮到你了。",
+  "waitingOpp": "等待对手……",
+  "botThinking": "机器人思考中……",
+  "winWhite": "♔ 白方获胜！",
+  "winBlack": "♚ 黑方获胜！",
+  "drawTitle": "🤝 和棋",
+  "kingsWhite": "♔ 白方王：{n}",
+  "kingsBlack": "♚ 黑方王：{n}",
+  "seedLabel": "种子 {n}",
+  "modePiecesShort": "随机棋子",
+  "modeEverythingShort": "完全随机",
+  "capWhite": "♔ 白方吃掉：{list}",
+  "capBlack": "♚ 黑方吃掉：{list}",
+  "capNone": "—",
+  "movesEmpty": "还没有走法——骰子已经发话，现在轮到你了。",
+  "reasonDrawNoKings": "双方都没有王了。和棋——重新掷骰吧！",
+  "reasonWhiteNoKing": "白方没有王了。黑方获胜！",
+  "reasonBlackNoKing": "黑方没有王了。白方获胜！",
+  "reasonStalemate": "完全无合法走法——僵局。和棋。",
+  "reasonRepetition": "同一局面出现三次——和棋。",
+  "reasonFifty": "50 步规则——和棋。",
+  "resignWhite": "白方认输。",
+  "resignBlack": "黑方认输。",
+  "connLocal": "本地对弈",
+  "connLocal2p": "本地双人——同一屏幕，轮流下棋。",
+  "connLocalRematch": "本地双人——新的一局！",
+  "connBot": "你（白方） vs 机器人（{level}）。机器人执黑。",
+  "connBotSimple": "你（白方） vs 机器人。",
+  "connOnline": "在线对弈",
+  "connWaitingFriend": "房间 <b>{code}</b>——等待朋友加入……<br>把代码发给他们，或使用下方的复制按钮。",
+  "connConnectedHost": "<b>已连接！</b>朋友加入了。你执白。",
+  "connConnectedGuest": "<b>已连接！</b>你加入了。你执黑。",
+  "connDisconnected": "<b>对手已断开连接。</b>你可以继续查看棋盘，或返回菜单开始新对局。",
+  "connLobbyWaiting": "大厅（位置 {slot}）——等待对手加入……",
+  "connRematch": "在线对弈——再来一局！颜色已交换。",
+  "connGuestStart": "在线对弈——你执<b>黑</b>。白方先行。",
+  "msgPeerFail": "无法加载多人游戏库（PeerJS）。请检查网络后重试——机器人和本地对弈仍可使用。",
+  "msgPeerFailShort": "无法加载多人游戏库（PeerJS）。请检查网络后重试。",
+  "msgCreatingRoom": "正在创建房间 {code}……",
+  "msgRoomLive": "房间 {code} 已创建——把代码发给朋友。",
+  "msgCreateFail": "无法创建房间（{err}）。请重试。",
+  "msgTypeCode": "请先输入房间代码。",
+  "msgJoining": "正在加入房间 {code}……",
+  "msgJoinTimeout": "仍在尝试连接房间 {code}——代码正确吗？朋友的房间还开着吗？",
+  "msgJoinFail": "无法加入房间 {code}（{err}）。请检查代码。",
+  "msgJoined": "已加入房间 {code}！等待棋盘……",
+  "msgLooking": "正在寻找对手……",
+  "msgLobbyBusy": "大厅位置目前全满——请几秒后再试，或自己创建一个房间。",
+  "msgLobbyWaiting": "等待对手……（大厅位置 {slot}）",
+  "msgOpponentFound": "找到对手——祝好运！",
+  "msgRematchRequested": "已请求再来一局——等待房主……",
+  "msgRoomDetected": "检测到房间 {code}——点击“加入房间”进入。",
+  "msgCopyPrompt": "复制你的房间链接：",
+  "botLevelMedium": "中等",
+  "botLevelEasy": "简单",
+  "advTitle": "高级设置",
+  "advCustomize": "自定义棋子数量",
+  "advCentralPiece": "中心棋子",
+  "advAxisDist": "轴分布",
+  "advAxisStdDev": "轴标准差",
+  "advAxisRefMean": "轴参考均值",
+  "advShuffleAxis": "随机打乱轴",
+  "advRefSharesNote": "参考占比按均匀轴计算，总和为 100%。编辑某个占比会调整该棋子的均值，并将剩余占比重新分配给其他棋子。所选轴决定最终权重，点击 OK 后显示。",
+  "advOk": "确定",
+  "advCancel": "取消",
+  "pieceK": "王",
+  "pieceQ": "后",
+  "pieceR": "车",
+  "pieceB": "象",
+  "pieceN": "马",
+  "pieceP": "兵",
+  "distGaussian": "高斯",
+  "distPoisson": "泊松",
+  "distRayleigh": "瑞利",
+  "distUniform": "均匀",
+  "distLabel": "分布",
+  "editBy": "编辑方式",
+  "editParameters": "参数",
+  "editChance": "参考占比",
+  "refMean": "参考均值",
+  "stdDev": "标准差",
+  "refSharePct": "参考占比 (%)",
+  "setupRangeError": "均值使用 0 到 64，偏差和轴参数使用 0.1 到 64。",
+  "setupShareError": "无法达到该占比。请尝试其他百分比、分布或标准差。",
+  "xabTitle": "Xabinski!",
+  "xabPiece": "棋子",
+  "xabPrev": "之前",
+  "xabNew": "之后",
+  "xabExpected": "{mode}的预期占比，包括开局兵升变，在开局重新掷骰之前计算。",
+  "msgNoOpening": "在 {n} 次掷骰中没有找到合适的开局。请重试或更改棋子设置。"
+ },
+ "ja": {
+  "pageTitle": "RNG Chess——ランダム駒。完全ランダム。無料。",
+  "tagline": "毎局が新しいサイコロの目。二つとして同じ盤面はない。ずっと無料。",
+  "badge": "無料 • 登録不要 • PC + モバイル",
+  "langLabel": "言語",
+  "pickMode": "モードを選ぶ",
+  "pickModeSub": "モードは二つだけ。あとはサイコロが決める。",
+  "modePiecesTitle": "1 ランダム駒",
+  "modePiecesDesc": "両方とも16個の駒が通常の初期位置に並ぶ——ただし各マスに<b>どの</b>駒が来るかは完全にランダム。キング複数、キングなし、クイーン5個……何でもあり。",
+  "modeEverythingTitle": "2 完全ランダム",
+  "modeEverythingDesc": "駒の数もランダム。駒の種類もランダム。位置もランダム。制限なし。キングなしで始まったらその場で負け。",
+  "yourName": "あなたの名前",
+  "botLabel": "ボット",
+  "botMedium": "中級（欲張り）",
+  "botEasy": "初級（ランダム）",
+  "btnCreate": "➕ ルームを作る<br><small style='font-weight:500;font-size:12px'>コードを取得して友だちに送る</small>",
+  "btnAnyone": "🌍 誰かと対戦<br><small style='font-weight:500;font-size:12px'>見知らぬ人とマッチング</small>",
+  "btnBot": "🤖 ボットと対戦<br><small style='font-weight:500;font-size:12px'>一人で、今すぐ</small>",
+  "btnLocal": "👥 ローカル2人対戦<br><small style='font-weight:500;font-size:12px'>同じ画面で交互に</small>",
+  "joinPh": "ルームコード — 例：KQ7B",
+  "btnJoin": "ルームに入る →",
+  "rulesTitle": "RNG Chessのルール",
+  "rule1": "<b>キングを取れば勝ち。</b>片方にキングが複数ある場合、<b>すべて</b>取らなければならない。1個取るだけでは数が減るだけ。",
+  "rule2": "<b>開始時にキングなし＝即負け。</b>デフォルト設定では、駒のある各陣営がキング0個を出す確率は5%。1個が最も多い結果です。",
+  "rule3": "<b>序盤の出目はキングを守る。</b>キングがチェックされた状態で始まる場合や、両方にキングがあって白に手がない場合は盤面を振り直す。初手でキングにチェックがかかる場合は、90%の確率で振り直す。",
+  "rule4": "<b>それ以外の動きは通常のチェス通り。</b>ポーン、ナイト、ビショップ、ルーク、クイーン、キングはすべて通常通りに動く。ポーンは最終ランクでプロモーション（自分で選ぶ）。アンパッサン可。<b>キャスリングなし</b>——駒がランダムでは大混乱になる。",
+  "rule5": "<b>キングも他の駒と同じように取られる。</b>キングが攻撃されて守れなければ死ぬ——最後のキングが倒れたときに負け。チェックメイトはない。",
+  "rule6": "<b>大事なのは最後のキングだけ：</b>ゲームが終わるのは、片方が最後のキングを失ったときだけ。合法手がまったくない場合はステイルメイト——引き分け。繰り返しと50手ルールも引き分け。",
+  "rule7": "<b>白が先手。</b>ルームを作った人が白（再戦時は色を交換）。",
+  "rule8": "<b>手は必ず届く。</b>すべての手で盤面全体を送り、相手が確認し、両者が数秒ごとに照合する——手が失われても盤面は自動で修復される。",
+  "footer1": "RNG Chess v1.2.1——無料、アカウント不要、広告なし。Cloudflare Pagesでホスト。コードはGitHubに。",
+  "footer2": "ルームコードとマッチングはブラウザ内のピアツーピア（WebRTC）で動作——ゲームサーバーなし、費用なし、登録なし。",
+  "flipBoard": "⇅ 盤面を反転",
+  "soundOn": "🔊 サウンド オン",
+  "soundOff": "🔇 サウンド オフ",
+  "menuBtn": "← メニュー",
+  "roomHeading": "ルーム",
+  "capturedHeading": "取った駒",
+  "movesHeading": "棋譜",
+  "rematchBtn": "🎲 再戦（振り直し）",
+  "resignBtn": "🏳 投了",
+  "promoTitle": "ポーンのプロモーション",
+  "promoSub": "駒を選んでください。（サイコロが見ています。）",
+  "overRematchBtn": "🎲 再戦",
+  "overMenuBtn": "メニュー",
+  "copyBtn": "コード / リンクをコピー",
+  "copiedBtn": "コピーしました！",
+  "turnWhite": "白の番",
+  "turnBlack": "黒の番",
+  "checkSuffix": " —— チェック！",
+  "yourMove": "あなたの番です。",
+  "waitingOpp": "相手を待っています…",
+  "botThinking": "ボットが考えています…",
+  "winWhite": "♔ 白の勝ち！",
+  "winBlack": "♚ 黒の勝ち！",
+  "drawTitle": "🤝 引き分け",
+  "kingsWhite": "♔ 白のキング：{n}",
+  "kingsBlack": "♚ 黒のキング：{n}",
+  "seedLabel": "シード {n}",
+  "modePiecesShort": "ランダム駒",
+  "modeEverythingShort": "完全ランダム",
+  "capWhite": "♔ 白が取った駒：{list}",
+  "capBlack": "♚ 黒が取った駒：{list}",
+  "capNone": "—",
+  "movesEmpty": "まだ手がありません——サイコロは語った、あとは君の番だ。",
+  "reasonDrawNoKings": "両方ともキングが残っていない。引き分け——振り直そう！",
+  "reasonWhiteNoKing": "白にキングが残っていない。黒の勝ち！",
+  "reasonBlackNoKing": "黒にキングが残っていない。白の勝ち！",
+  "reasonStalemate": "合法手がまったくない——ステイルメイト。引き分け。",
+  "reasonRepetition": "同一局面が3回——引き分け。",
+  "reasonFifty": "50手ルール——引き分け。",
+  "resignWhite": "白が投了しました。",
+  "resignBlack": "黒が投了しました。",
+  "connLocal": "ローカル対局",
+  "connLocal2p": "ローカル2人対戦——同じ画面で交互に。",
+  "connLocalRematch": "ローカル2人対戦——新しい振り直し！",
+  "connBot": "あなた（白） vs ボット（{level}）。ボットは黒。",
+  "connBotSimple": "あなた（白） vs ボット。",
+  "connOnline": "オンライン対局",
+  "connWaitingFriend": "ルーム <b>{code}</b>——友だちの参加を待っています…<br>コードを送るか、下のコピーボタンを使ってください。",
+  "connConnectedHost": "<b>接続しました！</b>友だちが参加しました。あなたは白です。",
+  "connConnectedGuest": "<b>接続しました！</b>参加しました。あなたは黒です。",
+  "connDisconnected": "<b>相手が切断しました。</b>盤面を眺めたままでも、メニューに戻って新しいゲームを始めても構いません。",
+  "connLobbyWaiting": "ロビー（スロット{slot}）——対戦相手の参加を待っています…",
+  "connRematch": "オンライン対局——再戦！色を交換しました。",
+  "connGuestStart": "オンライン対局——あなたは<b>黒</b>です。白が先手。",
+  "msgPeerFail": "マルチプレイヤーライブラリ（PeerJS）を読み込めませんでした。接続を確認して再試行してください——ボット対戦とローカル対戦は使えます。",
+  "msgPeerFailShort": "マルチプレイヤーライブラリ（PeerJS）を読み込めませんでした。接続を確認して再試行してください。",
+  "msgCreatingRoom": "ルーム {code} を作成中…",
+  "msgRoomLive": "ルーム {code} が有効です——コードを友だちに送ってください。",
+  "msgCreateFail": "ルームを作成できませんでした（{err}）。もう一度お試しください。",
+  "msgTypeCode": "先にルームコードを入力してください。",
+  "msgJoining": "ルーム {code} に参加中…",
+  "msgJoinTimeout": "ルーム {code} への接続を試行中です——コードは合っていますか？友だちのルームはまだ開いていますか？",
+  "msgJoinFail": "ルーム {code} に参加できませんでした（{err}）。コードを確認してください。",
+  "msgJoined": "ルーム {code} に参加しました！盤面を待っています…",
+  "msgLooking": "対戦相手を探しています…",
+  "msgLobbyBusy": "ロビーのスロットは現在すべて埋まっています——数秒後にもう一度お試しください。またはルームを作成してください。",
+  "msgLobbyWaiting": "対戦相手を待っています…（ロビーのスロット{slot}）",
+  "msgOpponentFound": "対戦相手が見つかりました——健闘を祈ります！",
+  "msgRematchRequested": "再戦をリクエストしました——ホストを待っています…",
+  "msgRoomDetected": "ルーム {code} を検出しました——「ルームに入る」を押して参加してください。",
+  "msgCopyPrompt": "ルームのリンクをコピー：",
+  "botLevelMedium": "中級",
+  "botLevelEasy": "初級",
+  "advTitle": "詳細設定",
+  "advCustomize": "駒の数をカスタマイズ",
+  "advCentralPiece": "中心の駒",
+  "advAxisDist": "軸の分布",
+  "advAxisStdDev": "軸の標準偏差",
+  "advAxisRefMean": "軸の参照平均",
+  "advShuffleAxis": "軸をシャッフル",
+  "advRefSharesNote": "参照シェアは均一な軸で計算され、合計100%になります。シェアを編集すると、その駒の平均が調整され、残りが他の駒に再分配されます。選択した軸が最終的な重みを決め、OKの後に表示されます。",
+  "advOk": "OK",
+  "advCancel": "キャンセル",
+  "pieceK": "キング",
+  "pieceQ": "クイーン",
+  "pieceR": "ルーク",
+  "pieceB": "ビショップ",
+  "pieceN": "ナイト",
+  "pieceP": "ポーン",
+  "distGaussian": "ガウス",
+  "distPoisson": "ポアソン",
+  "distRayleigh": "レイリー",
+  "distUniform": "一様",
+  "distLabel": "分布",
+  "editBy": "編集方法",
+  "editParameters": "パラメータ",
+  "editChance": "参照シェア",
+  "refMean": "参照平均",
+  "stdDev": "標準偏差",
+  "refSharePct": "参照シェア (%)",
+  "setupRangeError": "平均は0〜64、偏差と軸パラメータは0.1〜64を使ってください。",
+  "setupShareError": "そのシェアには到達できませんでした。別の割合、分布、標準偏差を試してください。",
+  "xabTitle": "Xabinski!",
+  "xabPiece": "駒",
+  "xabPrev": "変更前",
+  "xabNew": "変更後",
+  "xabExpected": "オープニングの振り直し前の、{mode}の予想シェア（開始時のポーンのプロモーションを含む）。",
+  "msgNoOpening": "{n}回の振り直しでも適切な序盤が見つかりませんでした。もう一度試すか、駒の設定を変更してください。"
+ },
+ "fr": {
+  "pageTitle": "RNG Chess — Pièces aléatoires. Tout aléatoire. Gratuit.",
+  "tagline": "Chaque partie est un nouveau lancer de dés. Aucun échiquier ne se ressemble. Gratuit pour toujours.",
+  "badge": "GRATUIT • SANS INSCRIPTION • PC + MOBILE",
+  "langLabel": "Langue",
+  "pickMode": "Choisissez un mode",
+  "pickModeSub": "Deux modes. C'est tout. Les dés décident du reste.",
+  "modePiecesTitle": "1 Pièces aléatoires",
+  "modePiecesDesc": "Les 16 pièces de chaque camp apparaissent sur les cases de départ normales — mais <b>quelle</b> pièce tombe sur chaque case est complètement aléatoire. Plusieurs rois, zéro roi, cinq dames… tout est possible.",
+  "modeEverythingTitle": "2 TOUT ALÉATOIRE",
+  "modeEverythingDesc": "Le nombre de pièces est aléatoire. Les types de pièces sont aléatoires. Les cases sont aléatoires. Aucune limite. Si vous commencez sans roi, vous perdez sur-le-champ.",
+  "yourName": "Votre nom",
+  "botLabel": "Bot",
+  "botMedium": "Moyen (gourmand)",
+  "botEasy": "Facile (aléatoire)",
+  "btnCreate": "➕ Créer une salle<br><small style='font-weight:500;font-size:12px'>obtenez un code et envoyez-le à un ami</small>",
+  "btnAnyone": "🌍 Jouer contre n'importe qui<br><small style='font-weight:500;font-size:12px'>partie avec un inconnu</small>",
+  "btnBot": "🤖 Jouer contre le bot<br><small style='font-weight:500;font-size:12px'>en solo, tout de suite</small>",
+  "btnLocal": "👥 2 joueurs en local<br><small style='font-weight:500;font-size:12px'>même écran, à tour de rôle</small>",
+  "joinPh": "Code de salle — ex. : KQ7B",
+  "btnJoin": "Rejoindre la salle →",
+  "rulesTitle": "Comment fonctionne RNG Chess",
+  "rule1": "<b>On gagne en tuant les rois.</b> Si un camp a plusieurs rois, il faut capturer <b>tous</b> les rois. En capturer un seul ne fait que réduire le groupe.",
+  "rule2": "<b>Pas de roi au départ = défaite immédiate.</b> Avec les réglages par défaut, chaque camp avec des pièces a 5 % de chances de tirer zéro roi. Un roi est le résultat le plus fréquent.",
+  "rule3": "<b>Les lancers d'ouverture protègent les rois.</b> L'échiquier est relancé si un roi commence en échec ou si les deux camps ont des rois et que les Blancs n'ont aucun coup. Si un premier coup peut mettre un roi en échec, l'échiquier est relancé 90 % du temps.",
+  "rule4": "<b>Sinon, les coups sont ceux des échecs normaux.</b> Pions, cavaliers, fous, tours, dames et rois se déplacent de la façon habituelle. Les pions sont promus sur la dernière rangée (c'est vous qui choisissez). La prise en passant fonctionne. Il n'y a <b>pas de roque</b> — avec des pièces aléatoires, ce serait le chaos.",
+  "rule5": "<b>Les rois sont capturés comme n'importe quelle autre pièce.</b> Si votre roi est attaqué et que vous ne le sauvez pas, il meurt — vous ne perdez que lorsque votre dernier roi tombe. Il n'y a pas d'échec et mat.",
+  "rule6": "<b>Seul le dernier roi compte :</b> la partie ne se termine que lorsqu'un camp perd son dernier roi. Si un camp n'a plus aucun coup, c'est un pat — nulle. La répétition et la règle des 50 coups sont aussi des nulles.",
+  "rule7": "<b>Les Blancs jouent en premier.</b> Le créateur de la salle joue les Blancs (les couleurs s'échangent à la revanche).",
+  "rule8": "<b>Les coups arrivent toujours.</b> Chaque coup envoie tout l'échiquier, l'autre camp confirme, et les deux camps comparent leurs échiquiers toutes les quelques secondes — si un coup se perd, les échiquiers se réparent tout seuls.",
+  "footer1": "RNG Chess v1.2.1 — gratuit, sans compte, sans pub. Hébergé sur Cloudflare Pages. Code sur GitHub.",
+  "footer2": "Les codes de salle et le matchmaking fonctionnent en pair-à-pair dans votre navigateur (WebRTC) — pas de serveur de jeu, pas de coût, rien à signer.",
+  "flipBoard": "⇅ Retourner l'échiquier",
+  "soundOn": "🔊 Son activé",
+  "soundOff": "🔇 Son coupé",
+  "menuBtn": "← Menu",
+  "roomHeading": "Salle",
+  "capturedHeading": "Capturées",
+  "movesHeading": "Coups",
+  "rematchBtn": "🎲 Revanche (nouveau lancer)",
+  "resignBtn": "🏳 Abandonner",
+  "promoTitle": "Promouvoir votre pion",
+  "promoSub": "Choisissez une pièce. (Les dés vous regardent.)",
+  "overRematchBtn": "🎲 Revanche",
+  "overMenuBtn": "Menu",
+  "copyBtn": "Copier le code / lien",
+  "copiedBtn": "Copié !",
+  "turnWhite": "Aux Blancs de jouer",
+  "turnBlack": "Aux Noirs de jouer",
+  "checkSuffix": " — ÉCHEC !",
+  "yourMove": "À vous de jouer.",
+  "waitingOpp": "En attente de l'adversaire…",
+  "botThinking": "Le bot réfléchit…",
+  "winWhite": "♔ Les Blancs gagnent !",
+  "winBlack": "♚ Les Noirs gagnent !",
+  "drawTitle": "🤝 Nulle",
+  "kingsWhite": "♔ Rois blancs : {n}",
+  "kingsBlack": "♚ Rois noirs : {n}",
+  "seedLabel": "Graine {n}",
+  "modePiecesShort": "Pièces aléatoires",
+  "modeEverythingShort": "TOUT ALÉATOIRE",
+  "capWhite": "♔ Les Blancs ont pris : {list}",
+  "capBlack": "♚ Les Noirs ont pris : {list}",
+  "capNone": "—",
+  "movesEmpty": "Aucun coup pour l'instant — les dés ont parlé, à vous de jouer.",
+  "reasonDrawNoKings": "Plus aucun roi des deux côtés. Nulle — relancez !",
+  "reasonWhiteNoKing": "Les Blancs n'ont plus de roi. Les Noirs gagnent !",
+  "reasonBlackNoKing": "Les Noirs n'ont plus de roi. Les Blancs gagnent !",
+  "reasonStalemate": "Plus aucun coup légal — pat. Nulle.",
+  "reasonRepetition": "Même position trois fois — nulle.",
+  "reasonFifty": "Règle des 50 coups — nulle.",
+  "resignWhite": "Les Blancs abandonnent.",
+  "resignBlack": "Les Noirs abandonnent.",
+  "connLocal": "Partie locale",
+  "connLocal2p": "2 joueurs en local — même écran, à tour de rôle.",
+  "connLocalRematch": "2 joueurs en local — nouveau lancer !",
+  "connBot": "Vous (Blancs) contre le Bot ({level}). Le bot joue les Noirs.",
+  "connBotSimple": "Vous (Blancs) contre le Bot.",
+  "connOnline": "Partie en ligne",
+  "connWaitingFriend": "Salle <b>{code}</b> — en attente de votre ami…<br>Envoyez-lui le code, ou utilisez le bouton copier ci-dessous.",
+  "connConnectedHost": "<b>Connecté !</b> Votre ami a rejoint. Vous êtes les Blancs.",
+  "connConnectedGuest": "<b>Connecté !</b> Vous avez rejoint. Vous êtes les Noirs.",
+  "connDisconnected": "<b>Adversaire déconnecté.</b> Vous pouvez continuer à regarder l'échiquier, ou revenir au menu pour une nouvelle partie.",
+  "connLobbyWaiting": "Dans le salon (place {slot}) — en attente d'un adversaire…",
+  "connRematch": "Partie en ligne — revanche ! Couleurs échangées.",
+  "connGuestStart": "Partie en ligne — vous êtes les <b>Noirs</b>. Les Blancs jouent en premier.",
+  "msgPeerFail": "Impossible de charger la bibliothèque multijoueur (PeerJS). Vérifiez votre connexion et réessayez — le bot et le jeu local fonctionnent toujours.",
+  "msgPeerFailShort": "Impossible de charger la bibliothèque multijoueur (PeerJS). Vérifiez votre connexion et réessayez.",
+  "msgCreatingRoom": "Création de la salle {code}…",
+  "msgRoomLive": "La salle {code} est active — envoyez le code à votre ami.",
+  "msgCreateFail": "Impossible de créer la salle ({err}). Réessayez.",
+  "msgTypeCode": "Tapez d'abord un code de salle.",
+  "msgJoining": "Connexion à la salle {code}…",
+  "msgJoinTimeout": "Toujours en train d'essayer d'atteindre la salle {code} — le code est-il correct, et la salle de votre ami est-elle toujours ouverte ?",
+  "msgJoinFail": "Impossible de rejoindre la salle {code} ({err}). Vérifiez le code.",
+  "msgJoined": "Vous avez rejoint la salle {code} ! En attente de l'échiquier…",
+  "msgLooking": "Recherche d'un adversaire…",
+  "msgLobbyBusy": "Toutes les places du salon sont occupées pour le moment — réessayez dans quelques secondes, ou créez une salle.",
+  "msgLobbyWaiting": "En attente d'un adversaire… (place {slot} du salon)",
+  "msgOpponentFound": "Adversaire trouvé — bonne chance !",
+  "msgRematchRequested": "Revanche demandée — en attente de l'hôte…",
+  "msgRoomDetected": "Salle {code} détectée — appuyez sur Rejoindre la salle pour entrer.",
+  "msgCopyPrompt": "Copiez le lien de votre salle :",
+  "botLevelMedium": "moyen",
+  "botLevelEasy": "facile",
+  "advTitle": "Réglages avancés",
+  "advCustomize": "Personnaliser le nombre de pièces",
+  "advCentralPiece": "Pièce centrale",
+  "advAxisDist": "Distribution de l'axe",
+  "advAxisStdDev": "Écart type de l'axe",
+  "advAxisRefMean": "Moyenne de référence de l'axe",
+  "advShuffleAxis": "Mélanger l'axe",
+  "advRefSharesNote": "Les parts de référence sont calculées avec un axe uniforme et totalisent 100 %. Modifier une part ajuste la moyenne de cette pièce et redistribue le reste entre les autres pièces. L'axe sélectionné détermine les poids finaux, affichés après OK.",
+  "advOk": "OK",
+  "advCancel": "Annuler",
+  "pieceK": "Roi",
+  "pieceQ": "Dame",
+  "pieceR": "Tour",
+  "pieceB": "Fou",
+  "pieceN": "Cavalier",
+  "pieceP": "Pion",
+  "distGaussian": "Gaussienne",
+  "distPoisson": "Poisson",
+  "distRayleigh": "Rayleigh",
+  "distUniform": "Uniforme",
+  "distLabel": "Distribution",
+  "editBy": "Modifier par",
+  "editParameters": "Paramètres",
+  "editChance": "Part de référence",
+  "refMean": "Moyenne de référence",
+  "stdDev": "Écart type",
+  "refSharePct": "Part de référence (%)",
+  "setupRangeError": "Utilisez des moyennes de 0 à 64 et des écarts et paramètres d'axe de 0,1 à 64.",
+  "setupShareError": "Impossible d'atteindre cette part. Essayez un autre pourcentage, une autre distribution ou un autre écart type.",
+  "xabTitle": "Xabinski!",
+  "xabPiece": "Pièce",
+  "xabPrev": "Précédent",
+  "xabNew": "Nouveau",
+  "xabExpected": "Parts attendues pour {mode}, y compris les promotions des pions de départ, avant les nouveaux lancers d'ouverture.",
+  "msgNoOpening": "Aucune ouverture adéquate trouvée en {n} lancers. Réessayez ou modifiez les réglages des pièces."
+ },
+ "ko": {
+  "pageTitle": "RNG Chess——무작위 기물. 완전 무작위. 무료.",
+  "tagline": "매 게임이 새로운 주사위 굴림입니다. 같은 판은 두 번 없습니다. 영원히 무료.",
+  "badge": "무료 • 가입 불필요 • PC + 모바일",
+  "langLabel": "언어",
+  "pickMode": "모드 선택",
+  "pickModeSub": "두 가지 모드, 그게 전부입니다. 나머지는 주사위가 정합니다.",
+  "modePiecesTitle": "1 무작위 기물",
+  "modePiecesDesc": "양쪽 16개 기물이 모두 정상 시작 칸에 배치되지만, 각 칸에 <b>어떤</b> 기물이 놓일지는 완전히 무작위입니다. 킹 여러 개, 킹 없음, 퀸 다섯 개…… 뭐든 가능합니다.",
+  "modeEverythingTitle": "2 완전 무작위",
+  "modeEverythingDesc": "기물 수도 무작위, 기물 종류도 무작위, 위치도 무작위. 제한 없습니다. 킹 없이 시작하면 즉시 패배합니다.",
+  "yourName": "이름",
+  "botLabel": "봇",
+  "botMedium": "중간 (탐욕)",
+  "botEasy": "쉬움 (무작위)",
+  "btnCreate": "➕ 방 만들기<br><small style='font-weight:500;font-size:12px'>코드를 받아 친구에게 보내세요</small>",
+  "btnAnyone": "🌍 아무와나 대결<br><small style='font-weight:500;font-size:12px'>낯선 사람과 매칭</small>",
+  "btnBot": "🤖 봇과 대결<br><small style='font-weight:500;font-size:12px'>혼자, 지금 바로</small>",
+  "btnLocal": "👥 로컬 2인 대결<br><small style='font-weight:500;font-size:12px'>같은 화면에서 번갈아 두기</small>",
+  "joinPh": "방 코드 — 예: KQ7B",
+  "btnJoin": "방 참가 →",
+  "rulesTitle": "RNG Chess 규칙",
+  "rule1": "<b>킹을 잡으면 승리합니다.</b> 한쪽에 킹이 여러 개 있으면 <b>모두</b> 잡아야 합니다. 하나만 잡는 것은 수를 줄일 뿐입니다.",
+  "rule2": "<b>시작할 때 킹이 없으면 즉시 패배합니다.</b> 기본 설정에서는 기물이 있는 각 진영이 킹 0개를 뽑을 확률이 5%입니다. 킹 1개가 가장 흔한 결과입니다.",
+  "rule3": "<b>오프닝 굴림은 킹을 보호합니다.</b> 킹이 체크 상태로 시작하거나 양쪽 모두 킹이 있는데 백이 둘 수가 없으면 판을 다시 굴립니다. 첫 수로 킹을 체크할 수 있으면 90% 확률로 판을 다시 굴립니다.",
+  "rule4": "<b>그 외의 움직임은 일반 체스와 같습니다.</b> 폰, 나이트, 비숍, 룩, 퀸, 킹 모두 평소대로 움직입니다. 폰은 마지막 랭크에서 프로모션합니다(직접 선택). 앙파상 가능합니다. <b>캐슬링은 없습니다</b>——기물이 무작위인데 캐슬링까지 있으면 혼란스러우니까요.",
+  "rule5": "<b>킹도 다른 기물처럼 잡힙니다.</b> 킹이 공격받고 구하지 못하면 죽습니다. 마지막 킹이 쓰러질 때만 패배합니다. 체크메이트는 없습니다.",
+  "rule6": "<b>마지막 킹만 중요합니다.</b> 한쪽이 마지막 킹을 잃을 때만 게임이 끝납니다. 둘 수 있는 수가 전혀 없으면 스테일메이트——무승부입니다. 반복과 50수 규칙도 무승부입니다.",
+  "rule7": "<b>백이 먼저 둡니다.</b> 방을 만든 사람이 백을 맡습니다(재대결 시 색이 바뀝니다).",
+  "rule8": "<b>수는 항상 도착합니다.</b> 모든 수는 전체 판을 함께 보내고, 상대가 확인하며, 양쪽이 몇 초마다 판을 비교합니다. 수가 유실되어도 판이 스스로 복구됩니다.",
+  "footer1": "RNG Chess v1.2.1——무료, 계정 불필요, 광고 없음. Cloudflare Pages에서 호스팅. 코드는 GitHub에서.",
+  "footer2": "방 코드와 매칭은 브라우저 안에서 P2P(WebRTC)로 동작합니다. 게임 서버도, 비용도, 가입도 없습니다.",
+  "flipBoard": "⇅ 판 뒤집기",
+  "soundOn": "🔊 소리 켜기",
+  "soundOff": "🔇 소리 끄기",
+  "menuBtn": "← 메뉴",
+  "roomHeading": "방",
+  "capturedHeading": "잡은 기물",
+  "movesHeading": "수순",
+  "rematchBtn": "🎲 재대결 (새로 굴리기)",
+  "resignBtn": "🏳 기권",
+  "promoTitle": "폰 프로모션",
+  "promoSub": "기물을 선택하세요. (주사위가 지켜보고 있습니다.)",
+  "overRematchBtn": "🎲 재대결",
+  "overMenuBtn": "메뉴",
+  "copyBtn": "코드 / 링크 복사",
+  "copiedBtn": "복사됨!",
+  "turnWhite": "백 차례",
+  "turnBlack": "흑 차례",
+  "checkSuffix": " —— 체크!",
+  "yourMove": "당신 차례입니다.",
+  "waitingOpp": "상대를 기다리는 중…",
+  "botThinking": "봇이 생각하는 중…",
+  "winWhite": "♔ 백 승리!",
+  "winBlack": "♚ 흑 승리!",
+  "drawTitle": "🤝 무승부",
+  "kingsWhite": "♔ 백 킹: {n}개",
+  "kingsBlack": "♚ 흑 킹: {n}개",
+  "seedLabel": "시드 {n}",
+  "modePiecesShort": "무작위 기물",
+  "modeEverythingShort": "완전 무작위",
+  "capWhite": "♔ 백이 잡은 기물: {list}",
+  "capBlack": "♚ 흑이 잡은 기물: {list}",
+  "capNone": "—",
+  "movesEmpty": "아직 둔 수가 없습니다——주사위가 말했으니 이제 당신이 둘 차례입니다.",
+  "reasonDrawNoKings": "양쪽 모두 킹이 남지 않았습니다. 무승부——다시 굴리세요!",
+  "reasonWhiteNoKing": "백에게 킹이 남지 않았습니다. 흑 승리!",
+  "reasonBlackNoKing": "흑에게 킹이 남지 않았습니다. 백 승리!",
+  "reasonStalemate": "둘 수 있는 수가 전혀 없음——스테일메이트. 무승부.",
+  "reasonRepetition": "같은局面이 세 번——무승부。",
+  "reasonFifty": "50수 규칙——무승부.",
+  "resignWhite": "백이 기권했습니다.",
+  "resignBlack": "흑이 기권했습니다.",
+  "connLocal": "로컬 게임",
+  "connLocal2p": "로컬 2인 대결——같은 화면에서 번갈아 두기.",
+  "connLocalRematch": "로컬 2인 대결——새 판!",
+  "connBot": "당신(백) vs 봇({level}). 봇은 흑입니다.",
+  "connBotSimple": "당신(백) vs 봇.",
+  "connOnline": "온라인 게임",
+  "connWaitingFriend": "방 <b>{code}</b>——친구가 참가하기를 기다리는 중…<br>코드를 보내거나 아래 복사 버튼을 사용하세요.",
+  "connConnectedHost": "<b>연결됨!</b> 친구가 참가했습니다. 당신은 백입니다.",
+  "connConnectedGuest": "<b>연결됨!</b> 참가했습니다. 당신은 흑입니다.",
+  "connDisconnected": "<b>상대 연결이 끊겼습니다.</b> 판을 계속 보거나 메뉴로 돌아가 새 게임을 시작할 수 있습니다.",
+  "connLobbyWaiting": "로비(슬롯 {slot})——상대가 참가하기를 기다리는 중…",
+  "connRematch": "온라인 게임——재대결! 색이 바뀌었습니다.",
+  "connGuestStart": "온라인 게임——당신은 <b>흑</b>입니다. 백이 먼저 둡니다.",
+  "msgPeerFail": "멀티플레이어 라이브러리(PeerJS)를 불러올 수 없습니다. 연결을 확인하고 다시 시도하세요. 봇 대결과 로컬 게임은 계속 사용할 수 있습니다.",
+  "msgPeerFailShort": "멀티플레이어 라이브러리(PeerJS)를 불러올 수 없습니다. 연결을 확인하고 다시 시도하세요.",
+  "msgCreatingRoom": "방 {code} 만드는 중…",
+  "msgRoomLive": "방 {code}이(가) 열렸습니다. 코드를 친구에게 보내세요.",
+  "msgCreateFail": "방을 만들 수 없습니다({err}). 다시 시도하세요.",
+  "msgTypeCode": "먼저 방 코드를 입력하세요.",
+  "msgJoining": "방 {code}에 참가하는 중…",
+  "msgJoinTimeout": "방 {code}에 계속 연결을 시도하고 있습니다. 코드가 맞나요? 친구 방이 아직 열려 있나요?",
+  "msgJoinFail": "방 {code}에 참가할 수 없습니다({err}). 코드를 확인하세요.",
+  "msgJoined": "방 {code}에 참가했습니다! 판을 기다리는 중…",
+  "msgLooking": "상대를 찾는 중…",
+  "msgLobbyBusy": "지금 로비 슬롯이 모두 찼습니다. 몇 초 후 다시 시도하거나 방을 직접 만드세요.",
+  "msgLobbyWaiting": "상대를 기다리는 중…(로비 슬롯 {slot})",
+  "msgOpponentFound": "상대를 찾았습니다. 행운을 빕니다!",
+  "msgRematchRequested": "재대결을 요청했습니다. 호스트를 기다리는 중…",
+  "msgRoomDetected": "방 {code}을(를) 감지했습니다. '방 참가'를 눌러 입장하세요.",
+  "msgCopyPrompt": "방 링크를 복사하세요:",
+  "botLevelMedium": "중간",
+  "botLevelEasy": "쉬움",
+  "advTitle": "고급 설정",
+  "advCustomize": "기물 수 사용자 지정",
+  "advCentralPiece": "중심 기물",
+  "advAxisDist": "축 분포",
+  "advAxisStdDev": "축 표준 편차",
+  "advAxisRefMean": "축 참조 평균",
+  "advShuffleAxis": "축 섞기",
+  "advRefSharesNote": "참조 점유율은 균일 축으로 계산되며 합이 100%입니다. 점유율을 편집하면 해당 기물의 평균이 조정되고 나머지가 다른 기물에 재배분됩니다. 선택한 축이 최종 가중치를 결정하며, 확인을 누른 뒤 표시됩니다.",
+  "advOk": "확인",
+  "advCancel": "취소",
+  "pieceK": "킹",
+  "pieceQ": "퀸",
+  "pieceR": "룩",
+  "pieceB": "비숍",
+  "pieceN": "나이트",
+  "pieceP": "폰",
+  "distGaussian": "가우스",
+  "distPoisson": "푸아송",
+  "distRayleigh": "레일리",
+  "distUniform": "균일",
+  "distLabel": "분포",
+  "editBy": "편집 기준",
+  "editParameters": "매개변수",
+  "editChance": "참조 점유율",
+  "refMean": "참조 평균",
+  "stdDev": "표준 편차",
+  "refSharePct": "참조 점유율 (%)",
+  "setupRangeError": "평균은 0~64, 편차와 축 매개변수는 0.1~64를 사용하세요.",
+  "setupShareError": "해당 점유율에 도달할 수 없습니다. 다른 백분율, 분포 또는 표준 편차를 시도하세요.",
+  "xabTitle": "Xabinski!",
+  "xabPiece": "기물",
+  "xabPrev": "이전",
+  "xabNew": "이후",
+  "xabExpected": "오프닝 다시 굴리기 전, 시작 폰 프로모션을 포함한 {mode}의 예상 점유율.",
+  "msgNoOpening": "{n}번 굴려도 적절한 오프닝을 찾지 못했습니다. 다시 시도하거나 기물 설정을 바꾸세요."
+ }
+};
+function storeGet(k){ try{ return (typeof localStorage!=='undefined') ? localStorage.getItem(k) : null; }catch(e){ return null; } }
+function storeSet(k,v){ try{ if(typeof localStorage!=='undefined') localStorage.setItem(k,v); }catch(e){} }
+function langFromNavigator(){
+  try{
+    const l = ((typeof navigator!=='undefined' && navigator.language) || 'en').toLowerCase();
+    const short = l.split('-')[0];
+    return LANGS.indexOf(short) >= 0 ? short : 'en';
+  }catch(e){ return 'en'; }
+}
+let lang = storeGet('lang') || langFromNavigator();
+if(LANGS.indexOf(lang) < 0) lang = 'en';
+function t(key, vars){
+  let s = (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+  if(vars) for(const k in vars) s = s.split('{'+k+'}').join(String(vars[k]));
+  return s;
+}
+function reasonText(st){
+  if(!st) return '';
+  if(st.reasonKey) return t(st.reasonKey);
+  return st.reason || '';
+}
+function applyI18n(){
+  try{ if(typeof document!=='undefined' && document.documentElement) document.documentElement.lang = lang; }catch(e){}
+  try{ if(typeof document!=='undefined' && typeof document.title==='string') document.title = t('pageTitle'); }catch(e){}
+  if(typeof document==='undefined' || !document.querySelectorAll) return;
+  let list = [];
+  try{ list = document.querySelectorAll('[data-i18n]') || []; }catch(e){ list = []; }
+  for(let i=0;i<list.length;i++){ const el=list[i]; const k=el.dataset && el.dataset.i18n; if(k) el.textContent = t(k); }
+  try{ list = document.querySelectorAll('[data-i18n-html]') || []; }catch(e){ list = []; }
+  for(let i=0;i<list.length;i++){ const el=list[i]; const k=el.dataset && el.dataset.i18nHtml; if(k) el.innerHTML = t(k); }
+  try{ list = document.querySelectorAll('[data-i18n-ph]') || []; }catch(e){ list = []; }
+  for(let i=0;i<list.length;i++){ const el=list[i]; const k=el.dataset && el.dataset.i18nPh; if(k) el.placeholder = t(k); }
+  try{ list = document.querySelectorAll('[data-i18n-aria]') || []; }catch(e){ list = []; }
+  for(let i=0;i<list.length;i++){ const el=list[i]; const k=el.dataset && el.dataset.i18nAria; if(k && el.setAttribute) el.setAttribute('aria-label', t(k)); }
+  const sel = (typeof $==='function') ? $('langSelect') : null;
+  if(sel) sel.value = lang;
+  const snd = (typeof $==='function') ? $('btnSound') : null;
+  if(snd) snd.textContent = soundOn ? t('soundOn') : t('soundOff');
+  try{ const cs = (typeof document!=='undefined') ? document.getElementById('customSetup') : null; if(cs && cs.checked && typeof updateSetupFields==='function') updateSetupFields(); }catch(e){}
+}
+function setLang(l){
+  if(LANGS.indexOf(l) < 0) l = 'en';
+  lang = l; storeSet('lang', l);
+  applyI18n();
+  if(typeof render==='function') render();
+}
 
 function beep(freq,dur){ if(!soundOn) return; try{ const ctx=beep.ctx||(beep.ctx=new (window.AudioContext||window.webkitAudioContext)()); const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.value=freq; o.type='sine'; g.gain.value=0.06; o.connect(g); g.connect(ctx.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur); o.stop(ctx.currentTime+dur); }catch(e){} }
 function show(id,on){ $(id).classList.toggle('hidden',!on); }
@@ -735,22 +1777,24 @@ $('modePieces').onclick=()=>pickMode('pieces');
 $('modeEverything').onclick=()=>pickMode('everything');
 
 const PIECE_NAMES={K:'King',Q:'Queen',R:'Rook',B:'Bishop',N:'Knight',P:'Pawn'};
-const DISTRIBUTION_OPTIONS='<option value="gaussian">Gaussian</option><option value="poisson">Poisson</option><option value="rayleigh">Rayleigh</option><option value="uniform">Uniform</option>';
+function pieceName(type){ return (typeof t==='function') ? t('piece'+type) : PIECE_NAMES[type]; }
+function distOptions(){ return '<option value="gaussian" data-i18n="distGaussian">'+t('distGaussian')+'</option><option value="poisson" data-i18n="distPoisson">'+t('distPoisson')+'</option><option value="rayleigh" data-i18n="distRayleigh">'+t('distRayleigh')+'</option><option value="uniform" data-i18n="distUniform">'+t('distUniform')+'</option>'; }
+const DISTRIBUTION_OPTIONS=distOptions();
 let savedSetup;
 let savedInputModes={};
 let draftAxis=[];
 let pendingShare;
-$('axisCenter').innerHTML=TYPES.map(type=>'<option value="'+type+'">'+PIECE_NAMES[type]+'</option>').join('');
+$('axisCenter').innerHTML=TYPES.map(type=>'<option value="'+type+'" data-i18n="piece'+type+'">'+pieceName(type)+'</option>').join('');
 $('axisDistribution').innerHTML=DISTRIBUTION_OPTIONS;
 $('pieceSettings').innerHTML=TYPES.map(type=>{
-    const name=PIECE_NAMES[type];
+    const name=pieceName(type);
     const mean={K:1,Q:2,R:2,B:2,N:3,P:6}[type];
-    return '<fieldset class="piece-setting"><legend>'+name+'</legend>'+
-      '<label>Distribution <select id="dist'+type+'">'+DISTRIBUTION_OPTIONS+'</select></label>'+
-      '<label>Edit by <select id="input'+type+'"><option value="parameters">Parameters</option><option value="chance">Reference share</option></select></label>'+
-      '<label>Reference mean <input id="mean'+type+'" type="number" min="0" max="64" step="any" value="'+mean+'"></label>'+
-      '<label>Std. deviation <input id="spread'+type+'" type="number" min="0.1" max="64" step="any" value="1.5"></label>'+
-      '<label class="occurrence-field">Reference share (%) <input id="share'+type+'" type="number" min="0" max="100" step="any"></label></fieldset>';
+    return '<fieldset class="piece-setting"><legend data-i18n="piece'+type+'">'+name+'</legend>'+
+      '<label><span data-i18n="distLabel">Distribution</span> <select id="dist'+type+'">'+DISTRIBUTION_OPTIONS+'</select></label>'+
+      '<label><span data-i18n="editBy">Edit by</span> <select id="input'+type+'"><option value="parameters" data-i18n="editParameters">Parameters</option><option value="chance" data-i18n="editChance">Reference share</option></select></label>'+
+      '<label><span data-i18n="refMean">Reference mean</span> <input id="mean'+type+'" type="number" min="0" max="64" step="any" value="'+mean+'"></label>'+
+      '<label><span data-i18n="stdDev">Std. deviation</span> <input id="spread'+type+'" type="number" min="0.1" max="64" step="any" value="1.5"></label>'+
+      '<label class="occurrence-field"><span data-i18n="refSharePct">Reference share (%)</span> <input id="share'+type+'" type="number" min="0" max="100" step="any"></label></fieldset>';
   }).join('');
 
 function readSetupConfig(){
@@ -794,10 +1838,10 @@ function updateSetupFields(){
   if(draftAxis[2]!==center) draftAxis=setupAxis(center,mulberry32(randomSeed()));
   const distribution=$('axisDistribution').value;
   $('axisScaleLabel').hidden=distribution==='uniform';
-  $('axisParameterName').textContent=distribution==='gaussian'?'Axis standard deviation':'Axis reference mean';
+  $('axisParameterName').textContent=distribution==='gaussian'?t('advAxisStdDev'):t('advAxisRefMean');
   const config=readSetupConfig();
-  $('setupError').textContent=config?(pendingShare?.error||''):'Use means from 0 to 64 and deviations and axis parameters from 0.1 to 64.';
-  $('axisOrder').textContent=draftAxis.map(type=>PIECE_NAMES[type]).join(' · ');
+  $('setupError').textContent=config?(pendingShare?.error?t(pendingShare.error):''):t('setupRangeError');
+  $('axisOrder').textContent=draftAxis.map(type=>pieceName(type)).join(' · ');
   displayReferenceShares(config);
 }
 
@@ -808,7 +1852,7 @@ function applyPendingShare(){
   const target=$('share'+type).valueAsNumber/100;
   const mean=config&&target>=0&&target<=1?calibrateReferenceShare(mode,config,type,target):null;
   if(mean===null){
-    pendingShare.error='Could not reach that share. Try another percentage, distribution or standard deviation.';
+    pendingShare.error='setupShareError';
     updateSetupFields();
     return false;
   }
@@ -907,28 +1951,28 @@ function render(){
   });
   // status
   const wk=countKings(state.board,'w'), bk=countKings(state.board,'b');
-  const turnName=state.turn==='w'?'White':'Black';
+  const turnName=state.turn==='w'?t('turnWhite'):t('turnBlack');
   const inChk=kingsOf(state.board,state.turn).some(k=>isAttacked(state.board,(k/8)|0,k%8,opp(state.turn)));
   if(state.over){
-    $('statusBox').innerHTML=(state.winner?(state.winner==='w'?'♔ White wins!':'♚ Black wins!'):'🤝 Draw')+'<small>'+state.reason+'</small>';
+    $('statusBox').innerHTML=(state.winner?(state.winner==='w'?t('winWhite'):t('winBlack')):t('drawTitle'))+'<small>'+reasonText(state)+'</small>';
   } else {
-    $('statusBox').innerHTML=turnName+' to move'+(inChk?' — CHECK!':'')+'<small>'+(playMode==='online'?(myColor===state.turn?'Your move.':'Waiting for opponent…'):(playMode==='bot'?(state.turn==='b'?'Bot is thinking…':'Your move.'):''))+'</small>';
+    $('statusBox').innerHTML=turnName+(inChk?t('checkSuffix'):'')+'<small>'+(playMode==='online'?(myColor===state.turn?t('yourMove'):t('waitingOpp')):(playMode==='bot'?(state.turn==='b'?t('botThinking'):t('yourMove')):''))+'</small>';
   }
-  $('kingsBox').innerHTML='<span class="king-pill'+(wk===0?' dead':'')+'">♔ White kings: '+wk+'</span><span class="king-pill'+(bk===0?' dead':'')+'">♚ Black kings: '+bk+'</span><span class="king-pill">Seed '+state.seed+'</span><span class="king-pill">'+(state.mode==='pieces'?'Random Pieces':'RANDOM EVERYTHING')+'</span>';
+  $('kingsBox').innerHTML='<span class="king-pill'+(wk===0?' dead':'')+'">'+t('kingsWhite',{n:wk})+'</span><span class="king-pill'+(bk===0?' dead':'')+'">'+t('kingsBlack',{n:bk})+'</span><span class="king-pill">'+t('seedLabel',{n:state.seed})+'</span><span class="king-pill">'+(state.mode==='pieces'?t('modePiecesShort'):t('modeEverythingShort'))+'</span>';
   const capW=[], capB=[];
   for(const h of state.history){ if(h.captured){ (h.color==='w'?capW:capB).push(GLYPH[opp(h.color)][h.captured]); } }
-  $('capWhite').textContent='♔ White took: '+(capW.join(' ')||'—');
-  $('capBlack').textContent='♚ Black took: '+(capB.join(' ')||'—');
+  $('capWhite').textContent=t('capWhite',{list:capW.join(' ')||t('capNone')});
+  $('capBlack').textContent=t('capBlack',{list:capB.join(' ')||t('capNone')});
   $('movesBox').innerHTML=state.history.length?state.history.map((h,i)=>{
     const n=Math.floor(i/2)+1, pre=(i%2===0)?(n+'. '):'';
     return pre+'<b>'+h.piece+'</b> '+sqName(h.from)+(h.captured?'x':'–')+sqName(h.to)+(h.promotion?'='+h.promotion:'');
-  }).join(' &nbsp; '):'No moves yet — the dice have spoken, now you move.';
+  }).join(' &nbsp; '):t('movesEmpty');
   if(state.over) showOver();
 }
 function showOver(){
   if(!state||!state.over) return;
-  $('overTitle').textContent=state.winner?(state.winner==='w'?'♔ White wins!':'♚ Black wins!'):'🤝 Draw';
-  $('overReason').textContent=state.reason;
+  $('overTitle').textContent=state.winner?(state.winner==='w'?t('winWhite'):t('winBlack')):t('drawTitle');
+  $('overReason').textContent=reasonText(state);
   show('overModal',true);
 }
 function hideOver(){ show('overModal',false); }
@@ -1002,9 +2046,9 @@ function revealXabinski(m,previous,config){
     const after=finalPieceWeights(m,config);
     const percent=value=>(value*100).toFixed(2)+'%';
     $('xabinskiWeights').innerHTML=TYPES.map((type,i)=>
-      '<tr><th scope="row">'+PIECE_NAMES[type]+'</th><td><del>'+percent(before[i])+'</del></td><td>'+percent(after[i])+'</td></tr>'
+      '<tr><th scope="row">'+pieceName(type)+'</th><td><del>'+percent(before[i])+'</del></td><td>'+percent(after[i])+'</td></tr>'
     ).join('');
-    $('xabinskiMode').textContent=m==='pieces'?'Random Pieces':'Random Everything';
+    $('xabinskiExpected').innerHTML=t('xabExpected',{mode:'<span id="xabinskiMode">'+t(m==='pieces'?'modePiecesShort':'modeEverythingShort')+'</span>'});
     show('xabinskiResults',true);
     xabinskiTimer=setTimeout(()=>{ closeXabinski(); returnFromAdvanced(); },XABINSKI_STAGE_MS);
   },XABINSKI_STAGE_MS);
@@ -1014,7 +2058,7 @@ function startGame(m,seed,opts){
   opts=opts||{};
   const next=newGame(m,seed,opts.board||null,opts.config);
   if(!next){
-    const message='No suitable opening was found in '+OPENING_ATTEMPTS+' rolls. Try again or change the piece settings.';
+    const message=t('msgNoOpening',{n:OPENING_ATTEMPTS});
     if($('gameScreen').classList.contains('hidden')) setMenuMsg(message);
     else $('connBox').textContent=message;
     return false;
@@ -1029,7 +2073,7 @@ function startGame(m,seed,opts){
   show('menuScreen',false); show('gameScreen',true);
   $('roomBox').classList.toggle('hidden',!roomCode);
   if(roomCode) $('roomCodeText').textContent=roomCode;
-  $('connBox').innerHTML=opts.connText||(playMode==='online'?'Online game':'Local game');
+  $('connBox').innerHTML=opts.connText||(playMode==='online'?t('connOnline'):t('connLocal'));
   render();
   if(state.over) beep(220,0.3);
   return true;
@@ -1046,18 +2090,18 @@ function backToMenu(){
 $('btnMenu').onclick=backToMenu;
 $('btnOverMenu').onclick=backToMenu;
 $('btnFlip').onclick=()=>{ flipped=!flipped; render(); };
-$('btnSound').onclick=e=>{ soundOn=!soundOn; e.target.textContent=soundOn?'🔊 Sound on':'🔇 Sound off'; };
+$('btnSound').onclick=e=>{ soundOn=!soundOn; e.target.textContent=soundOn?t('soundOn'):t('soundOff'); };
 $('btnCopy').onclick=async()=>{
   const link=location.origin+location.pathname+'?room='+roomCode;
   const txt='RNG Chess room '+roomCode+' — join me: '+link;
-  try{ await navigator.clipboard.writeText(txt); $('btnCopy').textContent='Copied!'; setTimeout(()=>$('btnCopy').textContent='Copy code / link',1500); }
-  catch(e){ prompt('Copy your room link:',txt); }
+  try{ await navigator.clipboard.writeText(txt); $('btnCopy').textContent=t('copiedBtn'); setTimeout(()=>$('btnCopy').textContent=t('copyBtn'),1500); }
+  catch(e){ prompt(t('msgCopyPrompt'),txt); }
 };
 $('btnLocal').onclick=()=>{
-  startGame(mode,randomSeed(),{config:savedSetup,playMode:'local',connText:'Local 2-player — same screen, pass &amp; play.'});
+  startGame(mode,randomSeed(),{config:savedSetup,playMode:'local',connText:t('connLocal2p')});
 };
 $('btnBot').onclick=()=>{
-  startGame(mode,randomSeed(),{config:savedSetup,playMode:'bot',myColor:'w',connText:'You (White) vs Bot ('+botLevel+'). Bot plays Black.'});
+  startGame(mode,randomSeed(),{config:savedSetup,playMode:'bot',myColor:'w',connText:t('connBot',{level:t(botLevel==='medium'?'botLevelMedium':'botLevelEasy')})});
 };
 $('btnRematch').onclick=()=>requestRematch();
 $('btnOverRematch').onclick=()=>{ hideOver(); requestRematch(); };
@@ -1065,7 +2109,7 @@ $('btnResign').onclick=()=>{
   if(!state||state.over) return;
   if(playMode==='online'&&conn&&conn.open) send({t:'resign',by:myColor});
   const loser=playMode==='local'?state.turn:(myColor||state.turn);
-  state.over=true; state.winner=opp(loser); state.reason=(loser==='w'?'White':'Black')+' resigned.'; render();
+  state.over=true; state.winner=opp(loser); state.reasonKey=loser==='w'?'resignWhite':'resignBlack'; state.reason=t(state.reasonKey); render();
 };
 function requestRematch(){
   const m=state?state.mode:mode;
@@ -1073,14 +2117,14 @@ function requestRematch(){
   const config=state?.config;
   if(playMode==='online'&&conn&&conn.open){
     if(isHost){ const nc=myColor==='w'?'b':'w';
-      if(startGame(m,seed,{config,playMode:'online',myColor:nc,isHost:true,roomCode,connText:'Online game — rematch! Colours swapped.'})){
+      if(startGame(m,seed,{config,playMode:'online',myColor:nc,isHost:true,roomCode,connText:t('connRematch')})){
         send({t:'rematch',mode:m,seed:state.seed,board:state.board,config,guestColor:opp(nc)});
       }
-    } else { send({t:'rematch-request',mode:m}); setMenuMsg('Rematch requested — waiting for host…'); }
+    } else { send({t:'rematch-request',mode:m}); setMenuMsg(t('msgRematchRequested')); }
     return;
   }
   const swap=playMode==='bot'||playMode==='online';
-  startGame(m,seed,{config,playMode,myColor:playMode==='bot'?'w':null,connText:playMode==='bot'?'You (White) vs Bot.':'Local 2-player — new roll!'});
+  startGame(m,seed,{config,playMode,myColor:playMode==='bot'?'w':null,connText:playMode==='bot'?t('connBotSimple'):t('connLocalRematch')});
 }
 
 /* ---- multiplayer (PeerJS) ---- */
@@ -1125,7 +2169,7 @@ function adoptState(s){
   return true;
 }
 function startFromState(s){
-  startGame(s.mode,s.seed,{board:s.board,config:s.config,playMode:'online',myColor:'b',isHost:false,roomCode,connText:'Online game — you are <b>Black</b>. White moves first.'});
+  startGame(s.mode,s.seed,{board:s.board,config:s.config,playMode:'online',myColor:'b',isHost:false,roomCode,connText:t('connGuestStart')});
   state=deserializeState(s);
   stateReceived=true; send({t:'ack',n:state.history.length}); render();
 }
@@ -1147,10 +2191,10 @@ function stopHelloLoop(){ clearInterval(helloTimer); helloTimer=null; }
 function attachConn(c,asHost){
   conn=c;
   c.on('data',msg=>handleMsg(msg,asHost));
-  c.on('close',()=>{ stopHeartbeat(); stopHelloLoop(); if(state&&!state.over){ $('connBox').innerHTML='<b>Opponent disconnected.</b> You can keep looking at the board, or head back to the menu for a new game.'; } });
+  c.on('close',()=>{ stopHeartbeat(); stopHelloLoop(); if(state&&!state.over){ $('connBox').innerHTML=t('connDisconnected'); } });
   c.on('error',()=>{});
   c.on('open',()=>{
-    $('connBox').innerHTML='<b>Connected!</b> '+(asHost?'Your friend joined. You are White.':'You joined. You are Black.');
+    $('connBox').innerHTML=asHost?t('connConnectedHost'):t('connConnectedGuest');
     if(asHost){ sendState(); }                 // full state, ack-tracked — guest adopts it
     else { stateReceived=false; startHelloLoop(); } // keep asking until the board arrives
   });
@@ -1186,58 +2230,58 @@ function handleMsg(msg,asHost){
       else send({t:'need-sync'});
     }
   } else if(msg.t==='resign'){
-    state.over=true; state.winner=opp(msg.by); state.reason=(msg.by==='w'?'White':'Black')+' resigned.'; render();
+    state.over=true; state.winner=opp(msg.by); state.reasonKey=msg.by==='w'?'resignWhite':'resignBlack'; state.reason=t(state.reasonKey); render();
   } else if(msg.t==='rematch'){
-    startGame(msg.mode,msg.seed,{board:msg.board,config:msg.config,playMode:'online',myColor:msg.guestColor,isHost:false,roomCode,connText:'Online game — rematch! Colours swapped.'});
+    startGame(msg.mode,msg.seed,{board:msg.board,config:msg.config,playMode:'online',myColor:msg.guestColor,isHost:false,roomCode,connText:t('connRematch')});
   } else if(msg.t==='rematch-request'&&asHost){
     requestRematch();
   }
 }
 $('btnCreate').onclick=()=>{
   const config=savedSetup, chosenMode=mode;
-  if(typeof Peer==='undefined'){ setMenuMsg('Could not load the multiplayer library (PeerJS). Check your connection and try again — bot and local play still work.'); return; }
+  if(typeof Peer==='undefined'){ setMenuMsg(t('msgPeerFail')); return; }
   const code=makeCode(); roomCode=code;
-  setMenuMsg('Creating room '+code+'…');
+  setMenuMsg(t('msgCreatingRoom',{code}));
   try{ if(peer) peer.destroy(); }catch(e){}
   peer=new Peer(peerIdFor(code));
   peer.on('open',()=>{
     if(!startGame(chosenMode,randomSeed(),{config,playMode:'online',myColor:'w',isHost:true,roomCode:code,connText:'Room <b>'+code+'</b> — waiting for your friend to join…<br>Send them the code, or the copy button below.'})){
       peer.destroy(); peer=null; roomCode=null; return;
     }
-    setMenuMsg('Room '+code+' is live — send the code to your friend.');
+    setMenuMsg(t('msgRoomLive',{code}));
     waitingForGuest=true;
   });
   peer.on('connection',c=>{ waitingForGuest=false; attachConn(c,true); });
-  peer.on('error',err=>{ setMenuMsg('Could not create the room ('+(err&&err.type||'error')+'). Try again.'); });
+  peer.on('error',err=>{ setMenuMsg(t('msgCreateFail',{err:(err&&err.type||'error')})); });
 };
 $('btnJoin').onclick=()=>{
   const code=($('joinCode').value||'').trim().toUpperCase();
-  if(!code){ setMenuMsg('Type a room code first.'); return; }
+  if(!code){ setMenuMsg(t('msgTypeCode')); return; }
   joinRoom(code);
 };
 function joinRoom(code){
-  if(typeof Peer==='undefined'){ setMenuMsg('Could not load the multiplayer library (PeerJS). Check your connection and try again.'); return; }
-  roomCode=code; setMenuMsg('Joining room '+code+'…');
+  if(typeof Peer==='undefined'){ setMenuMsg(t('msgPeerFailShort')); return; }
+  roomCode=code; setMenuMsg(t('msgJoining',{code}));
   try{ if(peer) peer.destroy(); }catch(e){}
   peer=new Peer();
   peer.on('open',()=>{
     const c=peer.connect(peerIdFor(code),{reliable:true});
     attachConn(c,false);
-    c.on('open',()=>{ setMenuMsg('Joined room '+code+'! Waiting for the board…'); });
-    setTimeout(()=>{ if(!conn||!conn.open) setMenuMsg('Still trying to reach room '+code+' — is the code right, and is your friend\'s room still open?'); },6000);
+    c.on('open',()=>{ setMenuMsg(t('msgJoined',{code})); });
+    setTimeout(()=>{ if(!conn||!conn.open) setMenuMsg(t('msgJoinTimeout',{code})); },6000);
   });
-  peer.on('error',err=>{ setMenuMsg('Could not join room '+code+' ('+(err&&err.type||'error')+'). Double-check the code.'); });
+  peer.on('error',err=>{ setMenuMsg(t('msgJoinFail',{code,err:(err&&err.type||'error')})); });
 }
 /* Play Anyone: claim a lobby slot, or join the stranger waiting in one. */
 $('btnAnyone').onclick=async()=>{
   const config=savedSetup, chosenMode=mode;
-  if(typeof Peer==='undefined'){ setMenuMsg('Could not load the multiplayer library (PeerJS). Check your connection and try again.'); return; }
-  setMenuMsg('Looking for an opponent…');
+  if(typeof Peer==='undefined'){ setMenuMsg(t('msgPeerFailShort')); return; }
+  setMenuMsg(t('msgLooking'));
   for(let slot=1;slot<=5;slot++){
     const res=await tryLobbySlot(slot,chosenMode,config);
     if(res==='wait'||res==='joined'||res==='no-opening') return;
   }
-  setMenuMsg('All lobby slots are busy right now — try again in a few seconds, or create a room instead.');
+  setMenuMsg(t('msgLobbyBusy'));
 };
 function tryLobbySlot(slot,chosenMode,config){
   return new Promise(resolve=>{
@@ -1249,11 +2293,11 @@ function tryLobbySlot(slot,chosenMode,config){
     const timer=setTimeout(()=>{ try{p.destroy();}catch(e){} finish('next'); },4000);
     p.on('open',()=>{
       clearTimeout(timer); peer=p; roomCode=null;
-      if(!startGame(chosenMode,randomSeed(),{config,playMode:'online',myColor:'w',isHost:true,roomCode:null,connText:'In the lobby (slot '+slot+') — waiting for an opponent to join…'})){
+      if(!startGame(chosenMode,randomSeed(),{config,playMode:'online',myColor:'w',isHost:true,roomCode:null,connText:t('connLobbyWaiting',{slot})})){
         p.destroy(); peer=null; finish('no-opening'); return;
       }
-      setMenuMsg('Waiting for an opponent… (lobby slot '+slot+')');
-      p.on('connection',c=>{ attachConn(c,true); setMenuMsg('Opponent found — good luck!'); });
+      setMenuMsg(t('msgLobbyWaiting',{slot}));
+      p.on('connection',c=>{ attachConn(c,true); setMenuMsg(t('msgOpponentFound')); });
       finish('wait');
     });
     p.on('error',err=>{
@@ -1266,7 +2310,7 @@ function tryLobbySlot(slot,chosenMode,config){
           peer=p2; roomCode=null;
           const c=p2.connect(id,{reliable:true});
           attachConn(c,false);
-          c.on('open',()=>{ clearTimeout(t2); if(!done2){ done2=true; setMenuMsg('Opponent found — good luck!'); finish('joined'); } });
+          c.on('open',()=>{ clearTimeout(t2); if(!done2){ done2=true; setMenuMsg(t('msgOpponentFound')); finish('joined'); } });
           c.on('error',()=>{ clearTimeout(t2); if(!done2){ done2=true; finish('next'); } });
         });
         p2.on('error',()=>{ clearTimeout(t2); if(!done2){ done2=true; finish('next'); } });
@@ -1279,9 +2323,12 @@ function tryLobbySlot(slot,chosenMode,config){
   try{
     const q=new URLSearchParams(location.search);
     const room=(q.get('room')||'').trim().toUpperCase();
-    if(room){ $('joinCode').value=room; setMenuMsg('Room '+room+' detected — press Join room to enter.'); }
+    if(room){ $('joinCode').value=room; setMenuMsg(t('msgRoomDetected',{code:room})); }
   }catch(e){}
 })();
+/* ---- i18n init: restore the saved language (or the browser's), then apply it ---- */
+if($('langSelect')){ $('langSelect').value=lang; $('langSelect').onchange=e=>setLang(e.target.value); }
+applyI18n();
 if(typeof module!=='undefined'&&module.exports){ /* engine exports live in the first script block */ }
 </script>
 </body>

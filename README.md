@@ -2,6 +2,8 @@
 
 **A free browser chess variant. Every game is a new roll. No two boards alike.**
 
+**Version 1.2.1** — v1.2 rules (Rayleigh king counts, opening filter, custom piece distributions, Xabinski reveal), plus a language switcher: English, Português, Español, 简体中文， 日本語， Français, 한국어.
+
 Play it right now — no sign-up, no download, no cost. PC, mobile, and (probably not) your calculator.
 
 ## The game
@@ -36,6 +38,10 @@ Piece count is random. Piece types are random. Squares are random. No limits. A 
 
 A room link also works: open `https://<your-site>/?room=KQ7B` and the code is filled in for you.
 
+## Languages
+
+The language switcher sits at the top of the page (EN | PT | ES | ZH | JA | FR | KO) on every screen — menu and game. Your choice is saved in the browser; on first visit it follows your browser's language. Player names and room codes are never translated. "Xabinski" is never translated — the name stays exactly as Henrique wrote it in every language.
+
 ## $0 architecture — how multiplayer is free
 
 There is **no game server**. The whole game is one static file (`index.html`):
@@ -58,7 +64,10 @@ python3 -m http.server 8000
 Tests (engine only, no browser needed):
 
 ```bash
-node test/engine.test.js   # 23 checks: setups, multi-king wins, pins, en passant, promotion, bot games
+node test/engine.test.js   # 58 checks: setups, Rayleigh king counts, distributions, opening filter, multi-king wins, pins, en passant, promotion, v1.2 draws, bot games
+node test/bot.test.js      # 533 bot games, 0 failures
+node test/sync.test.js     # 18 checks: two clients stay in sync over a lossy link, incl. custom setups
+node test/i18n.test.js     # 54 checks: 7 languages, switching, persistence, browser-language detection, Xabinski name pin
 ```
 
 ## Deploy to Cloudflare Pages ($0)
@@ -92,8 +101,11 @@ See `worker/README.md` for details.
 ## Files
 
 ```
-index.html            the whole game (engine + UI + multiplayer), single file
+index.html            the whole game (engine + UI + multiplayer + i18n), single file
 test/engine.test.js   engine unit tests (node)
+test/bot.test.js      bot stress test (node)
+test/sync.test.js     two-client sync test over a fake lossy network (node)
+test/i18n.test.js     language-switcher tests: keys, switching, persistence, Xabinski pin (node)
 worker/               optional Cloudflare Worker + Durable Object relay
 wrangler.toml         Cloudflare Pages/Workers config
 README.md             this file
