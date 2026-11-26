@@ -171,7 +171,7 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
         <button id="shuffleAxis" type="button" class="ghost">Shuffle axis</button>
       </div>
       <p id="axisOrder"></p>
-      <p>Edit the reference parameters or the chance of drawing at least one piece. Editing the chance adjusts the reference mean while keeping the standard deviation. Poisson and Rayleigh are rescaled. The axis and available slots still determine the final weights, shown after OK.</p>
+      <p>Reference shares are calculated with a uniform axis and add up to 100%. Editing a share adjusts that piece’s mean and redistributes the remaining share across the other pieces. The selected axis determines the final weights, shown after OK.</p>
       <div class="piece-settings" id="pieceSettings"></div>
       <p id="setupError" role="status"></p>
     </div>
@@ -378,26 +378,8 @@ function referenceCountWeights(distribution,mean,spread,max){
   return Array.from({length:max+1},(_,k)=>Math.max(0,cdf(k+0.5)-(k===0?0:cdf(k-0.5))));
 }
 
-function occurrenceProbability(distribution,mean,spread){
-  return Math.max(0,1-referenceCountWeights(distribution,mean,spread,0)[0]);
-}
-
 const MAX_REFERENCE_MEAN=64;
-function calibrateReferenceMean(distribution,spread,target){
-  let low=0, high=MAX_REFERENCE_MEAN;
-  const min=occurrenceProbability(distribution,low,spread);
-  const max=occurrenceProbability(distribution,high,spread);
-  // Allow the last displayed decimal of the percentage to round at the boundary.
-  if(target<min-5e-7||target>max+5e-7) return null;
-  if(target<=min) return low;
-  if(target>max) return high;
-  for(let i=0;i<42;i++){
-    const mean=(low+high)/2;
-    if(occurrenceProbability(distribution,mean,spread)<target) low=mean;
-    else high=mean;
-  }
-  return (low+high)/2;
-}
+const SHARE_TOLERANCE=5e-7;
 
 function buildComposition(config,max){
   const axis=config.axis;
@@ -478,6 +460,56 @@ function finalPieceWeights(mode,config){
     expected[TYPES.indexOf('Q')]+=promoted;
   }
   return expected;
+}
+
+function referencePieceWeights(mode,config){
+  return finalPieceWeights(mode,{...config,distribution:'uniform'});
+}
+
+function calibrateReferenceShare(mode,config,type,target){
+  const index=TYPES.indexOf(type);
+  const piece={...config.pieces[type]};
+  const reference={...config,pieces:{...config.pieces,[type]:piece}};
+  const current=piece.mean;
+  function difference(mean){
+    piece.mean=mean;
+    return referencePieceWeights(mode,reference)[index]-target;
+  }
+  const currentDifference=difference(current);
+  if(Math.abs(currentDifference)<=SHARE_TOLERANCE) return current;
+
+  let bestMean=null;
+  // Binned distributions can have more than one crossing. Prefer the closest solution.
+  for(const limit of [0,MAX_REFERENCE_MEAN]){
+    let left=current, leftDifference=currentDifference;
+    const direction=Math.sign(limit-current);
+    while(left!==limit){
+      const right=direction<0?Math.max(limit,left-1):Math.min(limit,left+1);
+      if(bestMean!==null&&Math.abs(left-current)>=Math.abs(bestMean-current)) break;
+      const rightDifference=difference(right);
+      if(Math.abs(rightDifference)<=SHARE_TOLERANCE){
+        bestMean=right;
+        break;
+      }
+      if(Math.sign(leftDifference)!==Math.sign(rightDifference)){
+        let a=left, b=right;
+        for(let i=0;i<35;i++){
+          const midpoint=(a+b)/2;
+          const error=difference(midpoint);
+          if(Math.abs(error)<=SHARE_TOLERANCE){
+            if(bestMean===null||Math.abs(midpoint-current)<Math.abs(bestMean-current)) bestMean=midpoint;
+            break;
+          }
+          if(Math.sign(error)===Math.sign(leftDifference)) a=midpoint;
+          else b=midpoint;
+        }
+        break;
+      }
+      left=right;
+      leftDifference=rightDifference;
+    }
+  }
+  return bestMean;
 }
 
 function genSetup(mode, seed, config){
@@ -653,7 +685,7 @@ function botMove(st,difficulty){
 }
 function serializeState(st){ return {mode:st.mode,seed:st.seed,board:st.board,turn:st.turn,ep:st.ep,halfmove:st.halfmove,fullmove:st.fullmove,history:st.history,posCounts:st.posCounts,over:st.over,winner:st.winner,reason:st.reason,...(st.config?{config:st.config}:{})}; }
 function deserializeState(s){ const st=Object.assign({},s); st.board=s.board.map(p=>p?{t:p.t,c:p.c}:null); return st; }
-if(typeof module!=='undefined'&&module.exports){ module.exports={TYPES,VAL,genSetup,countKings,countPieces,kingsOf,pieceCounts,isAttacked,pseudoMoves,applyMoveToBoard,legalMoves,posKey,evaluate,newGame,doMove,botMove,serializeState,deserializeState,mulberry32,sqName,opp,finalPieceWeights,occurrenceProbability,calibrateReferenceMean}; }
+if(typeof module!=='undefined'&&module.exports){ module.exports={TYPES,VAL,genSetup,countKings,countPieces,kingsOf,pieceCounts,isAttacked,pseudoMoves,applyMoveToBoard,legalMoves,posKey,evaluate,newGame,doMove,botMove,serializeState,deserializeState,mulberry32,sqName,opp,finalPieceWeights,referencePieceWeights,calibrateReferenceShare}; }
 </script>
 <script>
 "use strict";
@@ -688,6 +720,7 @@ const DISTRIBUTION_OPTIONS='<option value="gaussian">Gaussian</option><option va
 let savedSetup;
 let savedInputModes={};
 let draftAxis=[];
+let pendingShare;
 $('axisCenter').innerHTML=TYPES.map(type=>'<option value="'+type+'">'+PIECE_NAMES[type]+'</option>').join('');
 $('axisDistribution').innerHTML=DISTRIBUTION_OPTIONS;
 $('pieceSettings').innerHTML=TYPES.map(type=>{
@@ -695,44 +728,11 @@ $('pieceSettings').innerHTML=TYPES.map(type=>{
     const mean={K:1,Q:2,R:2,B:2,N:3,P:6}[type];
     return '<fieldset class="piece-setting"><legend>'+name+'</legend>'+
       '<label>Distribution <select id="dist'+type+'">'+DISTRIBUTION_OPTIONS+'</select></label>'+
-      '<label>Edit by <select id="input'+type+'"><option value="parameters">Parameters</option><option value="chance">Occurrence chance</option></select></label>'+
+      '<label>Edit by <select id="input'+type+'"><option value="parameters">Parameters</option><option value="chance">Reference share</option></select></label>'+
       '<label>Reference mean <input id="mean'+type+'" type="number" min="0" max="64" step="any" value="'+mean+'"></label>'+
       '<label>Std. deviation <input id="spread'+type+'" type="number" min="0.1" max="64" step="any" value="1.5"></label>'+
-      '<label class="occurrence-field">Reference chance of at least one (%) <input id="chance'+type+'" type="number" min="0" max="100" step="any" aria-describedby="range'+type+'"></label>'+
-      '<small class="occurrence-field" id="range'+type+'"></small></fieldset>';
+      '<label class="occurrence-field">Reference share (%) <input id="share'+type+'" type="number" min="0" max="100" step="any"></label></fieldset>';
   }).join('');
-
-function updatePieceFields(type){
-  const distribution=$('dist'+type).value;
-  const meanField=$('mean'+type), chanceField=$('chance'+type);
-  const byChance=$('input'+type).value==='chance';
-  const spread=$('spread'+type).valueAsNumber;
-  const asPercent=probability=>(100*probability).toFixed(4);
-  meanField.readOnly=byChance;
-  chanceField.readOnly=!byChance;
-  $('range'+type).textContent='';
-  if(!(spread>=0.1&&spread<=64)){
-    if(byChance) meanField.value='';
-    else chanceField.value='';
-    return null;
-  }
-  let mean=meanField.valueAsNumber;
-  if(byChance){
-    const min=occurrenceProbability(distribution,0,spread);
-    const max=occurrenceProbability(distribution,MAX_REFERENCE_MEAN,spread);
-    $('range'+type).textContent='Available at this deviation: '+asPercent(min)+'–'+asPercent(max)+'%.';
-    const chance=chanceField.valueAsNumber/100;
-    if(!(chance>=0&&chance<=1)) mean=null;
-    else if(!(mean>=0&&mean<=MAX_REFERENCE_MEAN)||
-      Math.abs(occurrenceProbability(distribution,mean,spread)-chance)>5e-7){
-      mean=calibrateReferenceMean(distribution,spread,chance);
-    }
-    meanField.value=mean===null?'':mean.toFixed(6);
-  } else {
-    chanceField.value=mean>=0&&mean<=MAX_REFERENCE_MEAN?asPercent(occurrenceProbability(distribution,mean,spread)):'';
-  }
-  return mean!==null&&mean>=0&&mean<=MAX_REFERENCE_MEAN?{distribution,mean,spread}:null;
-}
 
 function readSetupConfig(){
   const center=$('axisCenter').value;
@@ -740,10 +740,32 @@ function readSetupConfig(){
   const scale=distribution==='uniform'?1:$('axisScale').valueAsNumber;
   const pieces={};
   for(const type of TYPES){
-    pieces[type]=updatePieceFields(type);
+    const mean=$('mean'+type).valueAsNumber;
+    const spread=$('spread'+type).valueAsNumber;
+    if(!(mean>=0&&mean<=MAX_REFERENCE_MEAN&&spread>=0.1&&spread<=64)) return null;
+    pieces[type]={distribution:$('dist'+type).value,mean,spread};
   }
-  if(!(scale>=0.1&&scale<=64)||TYPES.some(type=>!pieces[type])) return null;
+  if(!(scale>=0.1&&scale<=64)) return null;
   return {version:3,center,distribution,scale,axis:draftAxis,pieces};
+}
+
+function displayReferenceShares(config){
+  const shares=config&&referencePieceWeights(mode,config);
+  // Apportion the last decimal so the displayed percentages also sum to 100%.
+  const units=shares?.map(share=>share*1e6);
+  const rounded=units?.map(Math.floor);
+  if(rounded){
+    const remainders=rounded.map((value,i)=>({i,remainder:units[i]-value}));
+    remainders.sort((a,b)=>b.remainder-a.remainder);
+    const missing=1e6-rounded.reduce((sum,value)=>sum+value,0);
+    remainders.slice(0,missing).forEach(({i})=>rounded[i]++);
+  }
+  TYPES.forEach((type,i)=>{
+    const byShare=$('input'+type).value==='chance';
+    $('mean'+type).readOnly=byShare;
+    $('share'+type).readOnly=!byShare;
+    if(pendingShare?.type!==type) $('share'+type).value=rounded?(rounded[i]/1e4).toFixed(4):'';
+  });
 }
 
 function updateSetupFields(){
@@ -755,8 +777,26 @@ function updateSetupFields(){
   $('axisScaleLabel').hidden=distribution==='uniform';
   $('axisParameterName').textContent=distribution==='gaussian'?'Axis standard deviation':'Axis reference mean';
   const config=readSetupConfig();
-  $('setupError').textContent=config?'':'Use means from 0 to 64, deviations and axis parameters from 0.1 to 64, and a chance within the range shown.';
+  $('setupError').textContent=config?(pendingShare?.error||''):'Use means from 0 to 64 and deviations and axis parameters from 0.1 to 64.';
   $('axisOrder').textContent=draftAxis.map(type=>PIECE_NAMES[type]).join(' · ');
+  displayReferenceShares(config);
+}
+
+function applyPendingShare(){
+  if(!pendingShare) return true;
+  const {type}=pendingShare;
+  const config=readSetupConfig();
+  const target=$('share'+type).valueAsNumber/100;
+  const mean=config&&target>=0&&target<=1?calibrateReferenceShare(mode,config,type,target):null;
+  if(mean===null){
+    pendingShare.error='Could not reach that share. Try another percentage, distribution or standard deviation.';
+    updateSetupFields();
+    return false;
+  }
+  $('mean'+type).value=mean;
+  pendingShare=undefined;
+  updateSetupFields();
+  return true;
 }
 
 function returnFromAdvanced(){
@@ -766,6 +806,7 @@ function returnFromAdvanced(){
 }
 $('openAdvanced').onclick=()=>{
   $('advancedForm').reset?.();
+  pendingShare=undefined;
   $('customSetup').checked=!!savedSetup;
   draftAxis=savedSetup?.axis||[];
   if(savedSetup){
@@ -778,7 +819,6 @@ $('openAdvanced').onclick=()=>{
       $('mean'+type).value=mean;
       $('spread'+type).value=spread;
       $('input'+type).value=savedInputModes[type];
-      $('chance'+type).value=(100*occurrenceProbability(distribution,mean,spread)).toFixed(4);
     }
   }
   updateSetupFields();
@@ -788,14 +828,28 @@ $('openAdvanced').onclick=()=>{
 };
 $('cancelAdvanced').onclick=returnFromAdvanced;
 $('customSetup').onchange=updateSetupFields;
-$('customFields').oninput=updateSetupFields;
-$('customFields').onchange=updateSetupFields;
+$('customFields').oninput=event=>{
+  const id=event.target.id;
+  if(id?.startsWith('share')&&TYPES.includes(id.slice(5))){
+    pendingShare={type:id.slice(5)};
+    $('setupError').textContent='';
+    return;
+  }
+  updateSetupFields();
+};
+$('customFields').onchange=event=>{
+  const id=event.target.id;
+  if(pendingShare&&id==='share'+pendingShare.type){ applyPendingShare(); return; }
+  if(pendingShare&&id==='input'+pendingShare.type&&event.target.value==='parameters') pendingShare=undefined;
+  updateSetupFields();
+};
 $('shuffleAxis').onclick=()=>{
   draftAxis=setupAxis($('axisCenter').value,mulberry32(randomSeed()));
   updateSetupFields();
 };
 $('advancedForm').onsubmit=event=>{
   event.preventDefault();
+  if($('customSetup').checked&&!applyPendingShare()) return;
   const draft=$('customSetup').checked?readSetupConfig():undefined;
   if(draft===null){ updateSetupFields(); return; }
   const previous=draft||savedSetup;

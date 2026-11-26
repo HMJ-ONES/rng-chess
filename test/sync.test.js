@@ -103,18 +103,23 @@ async function runScenario(name, dropFn, movesToMake, custom = false) {
       field('spread' + type).valueAsNumber = Math.sqrt(2);
     }
     field('customSetup').onchange();
-    const initialChance=Number(field('chanceK').value);
+    const initialShare=Number(field('shareK').value);
+    const initialQueenShare=Number(field('shareQ').value);
     field('inputK').value='chance';
-    field('chanceK').value='80';
-    field('customFields').oninput();
-    check('setting occurrence chance recalibrates the reference mean and preserves deviation',
-      Number(field('meanK').value) < 2 && Number(field('meanK').value) > 0 &&
+    const shareEvent={target:{id:'shareK'}};
+    field('shareK').value='20';
+    field('customFields').oninput(shareEvent);
+    field('customFields').onchange(shareEvent);
+    const total=E.TYPES.reduce((sum,type)=>sum+Number(field('share'+type).value),0);
+    check('setting one reference share recalibrates the mean and redistributes other shares',
+      Number(field('meanK').value) > 2 && Math.abs(Number(field('shareK').value)-20)<0.0002 &&
+      Number(field('shareQ').value)<initialQueenShare && Math.abs(total-100)<1e-8 &&
       field('spreadK').valueAsNumber === Math.sqrt(2) && field('meanK').readOnly);
     field('inputK').value='parameters';
     field('meanK').valueAsNumber=2;
-    field('customFields').oninput();
-    check('setting parameters updates the displayed reference chance',
-      Number(field('chanceK').value) === initialChance && initialChance > 80 && field('chanceK').readOnly);
+    field('customFields').oninput({target:{id:'meanK'}});
+    check('setting parameters updates the displayed reference share',
+      Number(field('shareK').value) === initialShare && field('shareK').readOnly);
     const stages = [];
     host.setTimeout = (run, delay) => stages.push({run, delay});
     field('advancedForm').onsubmit({preventDefault() {}});

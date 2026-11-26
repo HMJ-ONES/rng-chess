@@ -115,16 +115,24 @@ console.log('Advanced piece distributions:');
     const low = sharesAt(0.5), high = sharesAt(3);
     check(distribution + ': the piece standard deviation changes its final share',
       Math.abs(low[0] - high[0]) > 0.005 && Math.abs(high.reduce((a,b) => a+b, 0) - 1) < 1e-8);
-    const probability = E.occurrenceProbability(distribution, 1, 1.5);
-    const calibrated = E.calibrateReferenceMean(distribution, 1.5, probability);
-    check(distribution + ': occurrence chance and reference mean round-trip',
-      calibrated !== null && Math.abs(calibrated - 1) < 1e-6);
-    check(distribution + ': unattainable probabilities are rejected',
-      E.calibrateReferenceMean(distribution, 1.5, 0) === null);
+    const withMean = mean => ({...config, version:3, pieces:{...pieces, K:{distribution, mean, spread:1.5}}});
+    const target = E.referencePieceWeights('pieces', withMean(1.25))[0];
+    const calibrated = E.calibrateReferenceShare('pieces', withMean(1), 'K', target);
+    check(distribution + ': the calibrated mean reproduces the requested share',
+      calibrated !== null && Math.abs(E.referencePieceWeights('pieces', withMean(calibrated))[0] - target) < 1e-6);
   }
   const centered = {...config, version:3, distribution:'gaussian'};
   check('the axis changes final shares independently of the reference occurrence chances',
     E.finalPieceWeights('pieces', centered)[0] > E.finalPieceWeights('pieces', {...centered, distribution:'uniform'})[0]);
+  const before = E.referencePieceWeights('everything', centered);
+  const target = before[0] + 0.02;
+  const mean = E.calibrateReferenceShare('everything', centered, 'K', target);
+  const after = E.referencePieceWeights('everything', {...centered, pieces:{...pieces,K:{...pieces.K,mean}}});
+  check('reference ignores the selected axis and redistributes the remaining share',
+    Math.abs(before.reduce((a,b) => a+b, 0) - 1) < 1e-8 &&
+    Math.abs(after.reduce((a,b) => a+b, 0) - 1) < 1e-8 && mean !== null &&
+    Math.abs(after[0] - target) < 1e-6 && after.slice(1).every((share,i) => share < before[i+1]) &&
+    JSON.stringify(before) === JSON.stringify(E.referencePieceWeights('everything', {...centered,distribution:'rayleigh'})));
   const everything = E.finalPieceWeights('everything', config);
   check('final shares include promotion of one eighth of starting pawns in Everything',
     Math.abs(everything[E.TYPES.indexOf('P')] - 7/48) < 1e-6 &&
