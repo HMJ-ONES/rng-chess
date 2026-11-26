@@ -81,25 +81,23 @@ console.log('Mode 2 — RANDOM EVERYTHING:');
   check('some boards have zero kings on both sides', sawZeroKingsBoth);
 }
 
-console.log('First-king weighting (both modes):');
-{
-  // Random Pieces: 0 kings per side should be rare but still possible.
-  // Nominal: 0.15 unforced x (5/6)^16 ~= 0.8% per side (was ~5.4%).
-  let zeroW = 0; const N = 3000;
-  for (let s = 1; s <= N; s++) if (E.countKings(E.genSetup('pieces', s).board, 'w') === 0) zeroW++;
-  const rate = zeroW / N;
-  check('Random Pieces: 0 white kings is rare but possible (' + zeroW + '/' + N + ' = ' + (rate * 100).toFixed(2) + '%)', rate > 0.001 && rate < 0.03, 'rate ' + rate);
-  // RANDOM EVERYTHING: sides with pieces but no king are usually given one.
-  let withPieces = 0, kingless = 0, emptySide = 0;
-  for (let s = 1; s <= N; s++) {
-    const b = E.genSetup('everything', s).board;
-    const n = E.countPieces(b, 'w');
-    if (n === 0) { emptySide++; continue; }
-    withPieces++;
-    if (E.countKings(b, 'w') === 0) kingless++;
+console.log('Rayleigh king counts (both modes):');
+for (const mode of ['pieces', 'everything']) {
+  for (const color of ['w', 'b']) {
+    const counts = [0, 0, 0, 0];
+    let withPieces = 0;
+    allSeeds(3000, seed => {
+      const { board } = E.genSetup(mode, seed);
+      if (E.countPieces(board, color) === 0) return;
+      withPieces++;
+      counts[Math.min(3, E.countKings(board, color))]++;
+    });
+    const zeroRate = counts[0] / withPieces;
+    check(mode + ' ' + color + ': about 5% without kings among sides with pieces',
+      zeroRate > 0.035 && zeroRate < 0.065, 'rate ' + zeroRate);
+    check(mode + ' ' + color + ': one king is most common, followed by two and then three or more',
+      counts[1] > counts[2] && counts[2] > counts[3], counts.join(', '));
   }
-  const kRate = kingless / withPieces;
-  check('RANDOM EVERYTHING: kingless-but-has-pieces is rare but possible (' + kingless + '/' + withPieces + ' = ' + (kRate * 100).toFixed(2) + '%, empty sides: ' + emptySide + ')', kingless > 0 && kRate < 0.05, 'rate ' + kRate);
 }
 
 console.log('No game is born with no moves at all:');

@@ -6,10 +6,10 @@ const path = require('path');
 
 function loadEngine() {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const start = html.indexOf('<script>\n"use strict";');
-  if (start < 0) throw new Error('engine script not found');
-  const end = html.indexOf('</script>', start);
-  const src = html.slice(start + '<script>\n'.length, end);
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+  const engine = scripts.find(([, src]) => src.includes('module.exports'));
+  if (!engine) throw new Error('engine script not found');
+  const [, src] = engine;
   const mod = { exports: {} };
   new Function('module', 'exports', src)(mod, mod.exports);
   return mod.exports;

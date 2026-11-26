@@ -132,7 +132,7 @@ footer{color:var(--mut);font-size:12.5px;text-align:center;margin-top:26px;line-
     <h2>How RNG Chess works</h2>
     <ul>
       <li><b>Win by killing kings.</b> If a side has several kings, <b>all</b> of them must be captured. Capturing one just thins the herd.</li>
-      <li><b>No king at the start = instant loss.</b> The dice are weighted so each side <b>usually</b> starts with at least one king — but a kingless start is still possible. Re-roll with a new game.</li>
+      <li><b>No king at the start = instant loss.</b> When the board is rolled, each side with pieces has a 5% chance of rolling zero kings. One king is the most common result.</li>
       <li><b>Every game starts playable.</b> If a roll would open with White having no move at all, the dice re-roll until White has a legal move.</li>
       <li><b>Normal chess moves otherwise.</b> Pawns, knights, bishops, rooks, queens and kings all move the usual way. Pawns promote on the last rank (you pick). En passant works. There is <b>no castling</b> — with random pieces it would be chaos.</li>
       <li><b>Kings are captured like any other piece.</b> If your king is attacked and you don't save it, it dies — you lose only when your last king falls. There is no checkmate.</li>
@@ -211,51 +211,47 @@ function randomSeed(){ if (typeof crypto!=='undefined' && crypto.getRandomValues
 function shuffle(arr,rng){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); const t=arr[i]; arr[i]=arr[j]; arr[j]=t; } return arr; }
 
 /* ---- setup generation: the heart of RNG Chess ---- */
-// First-king weighting (both modes): each side usually (85%) gets at least
-// one king. Only the FIRST king is weighted — extra kings still come only
-// from the uniform roll, and 0 kings stays possible (the 15% unforced case,
-// or a side with no pieces at all in RANDOM EVERYTHING).
-function maybeForceFirstKing(board,color,squares,rng){
-  if(rng()<0.85){
-    const s=squares[Math.floor(rng()*squares.length)];
-    board[s]={t:'K',c:color};
+const NON_KING_TYPES = TYPES.filter(type => type !== 'K');
+const KING_ZERO_PROBABILITY = 0.05;
+// Inverse CDF of a Rayleigh distribution with continuous mean 1.
+function sampleRayleigh(u){
+  return Math.sqrt(-4*Math.log1p(-u)/Math.PI);
+}
+const KING_ZERO_CUTOFF = sampleRayleigh(KING_ZERO_PROBABILITY);
+function drawKingCount(rng,availableSquares){
+  if(availableSquares===0) return 0;
+  const sample=sampleRayleigh(rng());
+  const count=sample<KING_ZERO_CUTOFF ? 0 : 1+Math.floor(sample-KING_ZERO_CUTOFF);
+  return Math.min(count,availableSquares);
+}
+function placePieces(board,color,squares,rng){
+  const kings=drawKingCount(rng,squares.length);
+  shuffle(squares,rng);
+  for(let i=0;i<squares.length;i++){
+    const type=i<kings ? 'K' : NON_KING_TYPES[Math.floor(rng()*NON_KING_TYPES.length)];
+    board[squares[i]]={t:type,c:color};
   }
 }
 function genSetup(mode, seed){
   const rng = mulberry32(seed>>>0);
   const board = new Array(64).fill(null);
-  const pick = () => TYPES[Math.floor(rng()*6)];
   if (mode==='pieces'){
-    // Standard 16 slots per side (ranks 1-2 white, 7-8 black), random type each.
-    for(let c=0;c<8;c++){
-      board[6*8+c]={t:pick(),c:'w'}; board[7*8+c]={t:pick(),c:'w'};
-      board[0*8+c]={t:pick(),c:'b'}; board[1*8+c]={t:pick(),c:'b'};
-    }
+    // Standard 16 slots per side (ranks 1-2 white, 7-8 black).
     const whiteSlots=[], blackSlots=[];
     for(let i=48;i<64;i++) whiteSlots.push(i);
     for(let i=0;i<16;i++) blackSlots.push(i);
-    maybeForceFirstKing(board,'w',whiteSlots,rng);
-    maybeForceFirstKing(board,'b',blackSlots,rng);
+    placePieces(board,'w',whiteSlots,rng);
+    placePieces(board,'b',blackSlots,rng);
   } else {
     // RANDOM EVERYTHING: random total (0-64), random split, random squares, random types.
     const total = Math.floor(rng()*65);
     const wCount = Math.floor(rng()*(total+1));
-    const bCount = total - wCount;
     const squares = shuffle(Array.from({length:64},(_,i)=>i), rng);
-    let k=0;
-    for(let i=0;i<wCount;i++) board[squares[k++]]={t:pick(),c:'w'};
-    for(let i=0;i<bCount;i++) board[squares[k++]]={t:pick(),c:'b'};
+    placePieces(board,'w',squares.slice(0,wCount),rng);
+    placePieces(board,'b',squares.slice(wCount,total),rng);
     // A pawn spawned on the last rank auto-promotes to queen (no illegal position).
     for(let i=0;i<64;i++){ const p=board[i]; if(!p||p.t!=='P') continue; const r=(i/8)|0;
       if((p.c==='w'&&r===0)||(p.c==='b'&&r===7)) p.t='Q'; }
-    // First-king weighting: a side with pieces but no king usually (85%)
-    // gets one random piece turned into a king. Only the first king.
-    for(const color of ['w','b']){
-      const mine=[]; for(let i=0;i<64;i++) if(board[i]&&board[i].c===color) mine.push(i);
-      if(mine.length>0 && countKings(board,color)===0 && rng()<0.85){
-        board[mine[Math.floor(rng()*mine.length)]].t='K';
-      }
-    }
   }
   return {board, mode, seed};
 }
